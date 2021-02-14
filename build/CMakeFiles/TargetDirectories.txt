@@ -1,0 +1,3 @@
+/home/billy/CLionProjects/COMP3980_Assignment1/build/CMakeFiles/rebuild_cache.dir
+/home/billy/CLionProjects/COMP3980_Assignment1/build/CMakeFiles/server.dir
+/home/billy/CLionProjects/COMP3980_Assignment1/build/CMakeFiles/edit_cache.dir

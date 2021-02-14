@@ -11,7 +11,6 @@
 #include "shared.h"
 #include <netdb.h>
 
-
 int main(int argc, char *argv[])
 {
     struct hostent *hostinfo;

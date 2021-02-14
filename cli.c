@@ -1,69 +1,39 @@
-#include<stdio.h> 
-#include<string.h>    
-#include<sys/socket.h>   
-#include<arpa/inet.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <dc/sys/socket.h>
+#include <dc/unistd.h>
+#include <dc/stdlib.h>
+#include <dc/netdb.h>
+#include <netdb.h>
+#include "shared.h"
+
 
 int main(int argc , char *argv[])
 {
-    int sock;
-    struct sockaddr_in server;
-    char message[1000] , server_reply[2000];
+    struct hostent *hostinfo;
+    struct sockaddr_in addr;
+    int fd;
+    ssize_t num_read;
+    char buf[BUF_SIZE];
 
-    //Create socket
-    sock = socket(AF_INET , SOCK_STREAM , 0);
-    if (sock == -1)
+    hostinfo = dc_gethostbyname("127.0.0.1");
+    fd = dc_socket(AF_INET, SOCK_STREAM, 0);
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr = *(struct in_addr *) hostinfo->h_addr;
+    dc_connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+
+    while((num_read = dc_read(STDIN_FILENO, buf, BUF_SIZE)) > 0)
     {
-        printf("Could not create socket");
-    }
-    puts("Socket created");
-
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
-    server.sin_family = AF_INET;
-    server.sin_port = htons( 8888 );
-
-    //Connect to remote server
-    if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        perror("connect failed. Error");
-        return 1;
+        dc_write(fd, buf, num_read);
     }
 
-    puts("Connected\n");
+    dc_close(fd);
 
-    //keep communicating with server
-    while(1)
-    {
-        printf( "Type 'q' to end the session:\n");
-        printf("Now type your message:");
-        scanf("%s" , message);
-
-        if( message[0] == 'q')
-        {
-             close(sock);
-             return 0;
-        }
-
-        else{ 
-
-        //Send some data
-        if( send(sock , message , strlen(message) , 0) < 0)
-        {
-            puts("Send failed");
-            return 1;
-        }
-
-        //Receive a reply from the server
-        if( recv(sock , server_reply , 2000 , 0) < 0)
-        {
-            puts("recv failed");
-            break;
-        }
-
-        puts("Server reply : ");
-        puts(server_reply);
-        }
-    }
-
-    close(sock);
-    return 0;
+    return EXIT_SUCCESS;
 }
