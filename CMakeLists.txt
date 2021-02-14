@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 11)
 include_directories(/usr/local/include)
 link_directories(/usr/local/lib)
 
-add_executable(serv.c)
+add_executable(server serv.c)
 target_link_libraries(server dcfsm dc)
-target_compile_options(server PRIVATE -Wpedantic -Wall -Wextra -ldc -lpthread -lrt)
+target_compile_options(server PRIVATE -Wpedantic -Wall -Wextra -ldc)
 

@@ -24,6 +24,7 @@
 #include <dc/unistd.h>
 #include <dc/sys/socket.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include "shared.h"
 
@@ -77,10 +78,58 @@ int main(int argc, char *argv[])
                     {ERROR,       PROMPT,     &prompt       },
                     { FSM_IGNORE, FSM_IGNORE, NULL          },
             };
+    char board[3][3] =   {{'A','B','C'},
+                          {'D','E','F'},
+                          {'G','H','I'}};
 
-    init_server();
+    //init_server();
 
-    /*int code;
+    printf("Initing server...\n");
+    struct sockaddr_in addr;
+    int sfd, client_num = BACKLOG;
+    pid_t childpid;
+
+    sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    dc_bind(sfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    dc_listen(sfd, BACKLOG);
+
+    for(;;) {
+        int cfd, status;
+        ssize_t num_read;
+        char buf[BUF_SIZE];
+
+        cfd = dc_accept(sfd, NULL, NULL);
+        if (cfd > 0) {
+            if (client_num >= 0) {
+                client_num--;
+                if (client_num == 0) {
+                    printf("=== GAME BEGINS ===\n");
+                    printf("");
+                    if ((childpid = fork()) == 0) { // handling each client
+                        while ((num_read = dc_read(cfd, buf, BUF_SIZE)) > 0) {
+                            dc_write(STDOUT_FILENO, buf, num_read);
+                        }
+                        dc_close(cfd);
+                        client_num++;
+                    }
+                }
+            } else {
+                /*char *server_full_response = "Sorry, server is full!\n";
+                printf("%s%d", server_full_response, strlen(server_full_response));
+                status = send(cfd, server_full_response, strlen(server_full_response), 0);
+                if (status == -1) {
+                    perror("send()\n");
+                }*/
+                dc_close(cfd);
+            }
+        }
+    }
+
+    int code;
     int start_state;
     int end_state;
 
@@ -93,8 +142,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Cannot move from %d to %d\n", start_state, end_state);
 
         return EXIT_FAILURE;
-    }*/
-
+    }
 //    fprintf(stderr, "Exiting state %d\n", start_state);
 
     return EXIT_SUCCESS;
@@ -104,7 +152,7 @@ static int init_server()
 {
     printf("Initing server...\n");
     struct sockaddr_in addr;
-    int sfd;
+    int sfd, client_num = BACKLOG;
     pid_t childpid;
 
     sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
@@ -117,18 +165,34 @@ static int init_server()
 
     for(;;)
     {
-        int cfd;
+        int cfd, status;
         ssize_t num_read;
         char buf[BUF_SIZE];
 
         cfd = dc_accept(sfd, NULL, NULL);
-
-        if ((childpid = fork()) == 0) { // handling each client
-            while((num_read = dc_read(cfd, buf, BUF_SIZE)) > 0)
-            {
-                dc_write(STDOUT_FILENO, buf, num_read);
+        if (cfd > 0) {
+            if (client_num > 0) {
+                client_num--;
+                if ((childpid = fork()) == 0) { // handling each client
+                    while((num_read = dc_read(cfd, buf, BUF_SIZE)) > 0)
+                    {
+                        dc_write(STDOUT_FILENO, buf, num_read);
+                    }
+                    dc_close(cfd);
+                    client_num++;
+                }
+            } else {
+                /*char *server_full_response = "Sorry, server is full!\n";
+                printf("%s%d", server_full_response, strlen(server_full_response));
+                status = send(cfd, server_full_response, strlen(server_full_response), 0);
+                if (status == -1) {
+                    perror("send()\n");
+                }*/
+                dc_close(cfd);
             }
-            dc_close(cfd);
+        }
+        if (client_num == 0) {
+
         }
     }
 
