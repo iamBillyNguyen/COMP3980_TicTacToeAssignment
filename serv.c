@@ -39,17 +39,17 @@ _Noreturn static int write_error(Environment *env);
 
 int i = 1;
 int moves = 0;
+int id[2];
+int response_code = 0;
 
 typedef enum
 {
-    PROMPT = FSM_APP_STATE_START,  // 2
-    AWAIT_CONNECTION,              // 3
-    READ,                          // 4
-    WRITE,                         // 5
-    WIN,                           // 6
-    LOSE,                          // 7
-    TIE,                           // 8
-    ERROR,                         // 9
+    READ = FSM_APP_STATE_START,  // 2
+    WRITE,                       // 5
+    WIN,                         // 6
+    LOSE,                        // 7
+    TIE,                         // 8
+    ERROR,                       // 9
 } States;
 
 
@@ -66,8 +66,7 @@ int main(int argc, char *argv[])
     EchoEnvironment env;
     StateTransition transitions[] =
             {
-                    { FSM_INIT,   PROMPT,     &prompt},
-                    { PROMPT,     READ,       &read_input   },
+                    { FSM_INIT,    READ,     &read_input   },
                     { READ,       ERROR,      &read_error   },
                     { READ,       WRITE,      &write_code   },
                     { READ,       TIE,        &prompt       },
@@ -75,7 +74,6 @@ int main(int argc, char *argv[])
                     { READ,       FSM_EXIT,   NULL  },
                     { WRITE,      ERROR,      &write_error  },
                     { WRITE,      READ,       &read_input   },
-                    {ERROR,       PROMPT,     &prompt       },
                     { FSM_IGNORE, FSM_IGNORE, NULL          },
             };
     char board[3][3] =   {{'A','B','C'},
@@ -83,66 +81,69 @@ int main(int argc, char *argv[])
                           {'G','H','I'}};
 
     //init_server();
-
-    printf("Initing server...\n");
+    printf("WELCOME TO BIT SERVER'S TIC TAC TOE GAME\n");
+    printf("Waiting for Players to join ...\n");
     struct sockaddr_in addr;
-    int sfd, client_num = BACKLOG;
-    pid_t childpid;
+    int sfd[BACKLOG], client_num = 0;
+    char x[4];
 
-    sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
+    sfd[0] = dc_socket(AF_INET, SOCK_STREAM, 0);
     memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(PORT);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    dc_bind(sfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
-    dc_listen(sfd, BACKLOG);
+    dc_bind(sfd[0], (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
 
-    for(;;) {
-        int cfd, status;
+    while (client_num < BACKLOG) {
+        dc_listen(sfd[0], BACKLOG);
+        int cfd, status, player[BACKLOG];
         ssize_t num_read;
         char buf[BUF_SIZE];
 
-        cfd = dc_accept(sfd, NULL, NULL);
-        if (cfd > 0) {
-            if (client_num >= 0) {
-                client_num--;
-                if (client_num == 0) {
-                    printf("=== GAME BEGINS ===\n");
-                    printf("");
-                    if ((childpid = fork()) == 0) { // handling each client
-                        while ((num_read = dc_read(cfd, buf, BUF_SIZE)) > 0) {
-                            dc_write(STDOUT_FILENO, buf, num_read);
-                        }
-                        dc_close(cfd);
-                        client_num++;
-                    }
-                }
-            } else {
-                /*char *server_full_response = "Sorry, server is full!\n";
-                printf("%s%d", server_full_response, strlen(server_full_response));
-                status = send(cfd, server_full_response, strlen(server_full_response), 0);
-                if (status == -1) {
-                    perror("send()\n");
-                }*/
-                dc_close(cfd);
+        cfd = dc_accept(sfd[0], NULL, NULL);
+        player[client_num] = cfd;
+        client_num++;
+
+        if (client_num == 1) {
+            char *response = "Awaiting for player 2 to join ...\n";
+            dc_write(sfd[0], response, strlen(response));
+            dc_read(sfd[0], x, strlen(x));
+            id[0] = atoi(x);
+        }
+        printf("%d has joined\n", client_num);
+        if (client_num == BACKLOG) {
+            char *response = "--------------GAME BEGINS--------------\n";
+            printf("%s", response);
+            dc_write(sfd[0], response, strlen(response));
+            dc_write(sfd[1], response, strlen(response));
+            dc_read(sfd[1], x, sizeof(x));
+            id[1] = atoi(x);
+
+            int code;
+            int start_state;
+            int end_state;
+
+            start_state = FSM_INIT; // 0
+            end_state   = READ;
+            code = fsm_run((Environment *)&env, &start_state, &end_state, transitions);
+
+            if(code != 0)
+            {
+                fprintf(stderr, "Cannot move from %d to %d\n", start_state, end_state);
+
+                return EXIT_FAILURE;
             }
         }
     }
 
-    int code;
-    int start_state;
-    int end_state;
+    if (fork() == 0) {
+        int count = 0;
+        while (count == 0) {
 
-    start_state = FSM_INIT; // 0
-    end_state   = PROMPT;
-    code = fsm_run((Environment *)&env, &start_state, &end_state, transitions);
-
-    if(code != 0)
-    {
-        fprintf(stderr, "Cannot move from %d to %d\n", start_state, end_state);
-
-        return EXIT_FAILURE;
+        }
     }
+
+
 //    fprintf(stderr, "Exiting state %d\n", start_state);
 
     return EXIT_SUCCESS;
