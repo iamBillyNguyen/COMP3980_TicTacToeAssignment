@@ -28,7 +28,7 @@ int main(int argc , char *argv[])
             {' ',' ',' '}
     };
 
-    hostinfo = dc_gethostbyname("127.0.0.1");
+    hostinfo = dc_gethostbyname("23.16.22.78");
     fd = dc_socket(AF_INET, SOCK_STREAM, 0);
     memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
