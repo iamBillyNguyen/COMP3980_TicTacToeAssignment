@@ -16,9 +16,17 @@ int main(int argc , char *argv[])
 {
     struct hostent *hostinfo;
     struct sockaddr_in addr;
-    int fd;
+    int fd, row,column,choice;;
     ssize_t num_read;
     char buf[BUF_SIZE];
+    char a[2][40];
+    char pid[4];
+    char clientWrite[1];
+    char playBoard [3][3] =   {							// to display the actual game status
+            {' ',' ',' '},
+            {' ',' ',' '},
+            {' ',' ',' '}
+    };
 
     hostinfo = dc_gethostbyname("127.0.0.1");
     fd = dc_socket(AF_INET, SOCK_STREAM, 0);
@@ -28,9 +36,45 @@ int main(int argc , char *argv[])
     addr.sin_addr = *(struct in_addr *) hostinfo->h_addr;
     dc_connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
 
-    while((num_read = dc_read(STDIN_FILENO, buf, BUF_SIZE)) > 0)
+    dc_read(fd, a, sizeof(a));
+    printf("%s\n",a[0]);
+
+    if(strcmp(a[1],"0")==0)
     {
-        dc_write(fd, buf, num_read);
+        int num1 = getpid();
+        sprintf(pid,"%d",num1);
+        dc_write(fd, pid, sizeof(pid));
+        dc_read(fd,a,sizeof(a));
+        printf("%s\n",a[0]);
+        printf("WELCOME TO BIT SERVER'S TIC TAC TOE!\n");
+    }
+
+    if(strcmp(a[1],"2")==0)
+    {
+        int num2 = getpid();
+        sprintf(pid,"%d",num2);
+        write(fd, pid, sizeof(pid));
+    }
+
+    if (strcmp(a[1],"1")!=0) {
+        for (;;) {
+            printf("\nPlayer %d,Please enter the number of the square where you want to place your '%c': \n",
+                   (strcmp(a[1], "1") == 0) ? 1 : 2, (strcmp(a[1], "1") == 0) ? 'X' : 'O');
+            scanf("%s", clientWrite);
+            choice = atoi(clientWrite);
+            row = --choice/3;
+            column = choice%3;
+            if(choice<0 || choice>9 || playBoard [row][column]>'9'|| playBoard [row][column]=='X' || playBoard [row][column]=='O')
+            printf("Invalid Input. Please Enter again.\n\n");
+
+            else
+            {
+                playBoard[row][column] = (strcmp(a[1], "1")==0)?'X':'O';
+                break;
+            }
+        }
+        write(fd, clientWrite, sizeof(clientWrite));
+        system("clear");
     }
 
     dc_close(fd);
