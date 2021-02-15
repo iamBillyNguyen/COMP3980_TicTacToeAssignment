@@ -30,6 +30,7 @@
 
 #define BACKLOG 2
 
+static int init_server(Environment *env);
 static int read_input(Environment *env);
 static int write_code(Environment *env);
 static int validate(Environment *env);
@@ -37,18 +38,18 @@ static int prompt(Environment *env);
 static int read_error(Environment *env);
 static int write_error(Environment *env);
 
-int moves = 0;
 int id[BACKLOG], player[BACKLOG];
 int response_code = 0;
 char a[2][40];
+int sfd[BACKLOG], client_num = 0;
+char x[4];
 
 typedef enum
 {
-    READ = FSM_APP_STATE_START,  // 2
+    INIT_SERV = FSM_APP_STATE_START,  // 2
+    READ,
     WRITE,                       // 3
     VALIDATE,                    // 4
-    WIN,                         // 5
-    LOSE,                        // 6
     TIE,                         // 7
     ERROR,                       // 8
 } States;
@@ -57,39 +58,66 @@ typedef enum
 typedef struct
 {
     Environment common;
-    int c, error_code;
+    char c;
+    int error_code;
     bool player2_turn;
 } TTTEnvironment;
 
 
-int main(int argc, char *argv[])
+int main()
 {
     TTTEnvironment env;
+    env.c = 'A';
+    env.error_code = 0;
+    env.player2_turn = false;
     StateTransition transitions[] =
             {
-                    { FSM_INIT,    READ,     &read_input   },
+                    { FSM_INIT,    INIT_SERV,     &init_server   },
+                    { INIT_SERV,    READ,     &read_input   },
                     { READ,       ERROR,      &read_error   },
                     { READ,       VALIDATE,   &validate   },
-                    {VALIDATE, ERROR, &write_error},
-                    {ERROR, READ, &read_input},
-                    { READ,       TIE,        &prompt       },
+                    {VALIDATE, ERROR,          &write_error},
+                    {VALIDATE, READ, &read_input},
+                    {ERROR,     READ,           &read_input},
                     { TIE,       FSM_EXIT,NULL      },
-                    { READ,       FSM_EXIT,   NULL  },
                     { WRITE,      ERROR,      &write_error  },
                     { WRITE,      READ,       &read_input   },
-                    { FSM_IGNORE, FSM_IGNORE, NULL          },
+                    { FSM_IGNORE, FSM_IGNORE, NULL  },
             };
     char board[3][3] =   {{'A','B','C'},
                           {'D','E','F'},
                           {'G','H','I'}};
 
-    //init_server();
+    int code;
+    int start_state;
+    int end_state;
+
+    start_state = FSM_INIT;
+    end_state   = INIT_SERV;
+    code = fsm_run((Environment *)&env, &start_state, &end_state, transitions);
+
+    if(code != 0)
+    {
+        fprintf(stderr, "Cannot move from %d to %d\n", start_state, end_state);
+
+        return EXIT_FAILURE;
+    }
+
+//    fprintf(stderr, "Exiting state %d\n", start_state);
+    dc_close(player[0]);
+    dc_close(player[1]);
+    return EXIT_SUCCESS;
+
+}
+
+static int init_server(Environment *env) {
+    TTTEnvironment *game_env;
+    game_env = (TTTEnvironment *)env;
     printf("WELCOME TO BIT SERVER'S TIC TAC TOE GAME\n");
     printf("Waiting for Players to join ...\n");
     strcpy(a[0],"Waiting for the other Player to join\n");
     struct sockaddr_in addr;
-    int sfd[BACKLOG], client_num = 0;
-    char x[4];
+
 
     sfd[0] = dc_socket(AF_INET, SOCK_STREAM, 0);
     memset(&addr, 0, sizeof(struct sockaddr_in));
@@ -103,59 +131,41 @@ int main(int argc, char *argv[])
 
         player[client_num] = dc_accept(sfd[0], 0, 0);
         client_num++;
-        printf("%d\n", client_num);
-        printf("Awaiting for player 2 ... \n");
         if (client_num == 1) {
             strcpy(a[1], "0");
             dc_write(player[0], a, sizeof(a));
-            dc_read(player[0], x, strlen(x));
+            dc_read(player[0], x, sizeof(x)); // read from player 1
             id[0] = atoi(x);
         }
         printf("Player %d has joined\n", client_num);
 
         if (client_num == BACKLOG) {
-            strcpy(a[0],"-------- GAME BEGINS --------");
+            strcpy(a[0],"-------- GAME BEGINS --------\n");
             strcpy(a[1],"1");
-            write(player[0],a,sizeof(a));
+            dc_write(player[0],a,sizeof(a));
             strcpy(a[1],"2");
-            write(player[1],a,sizeof(a));
-            read(player[1],x,sizeof(x));
+            dc_write(player[1],a,sizeof(a)); // read from player 2
+            dc_read(player[1],x,sizeof(x));
             id[1]=atoi(x);
         }
     }
 
     if (fork() == 0) {
-        env.player2_turn = false;
-        int code;
-        int start_state;
-        int end_state;
-
-        start_state = FSM_INIT; // 0
-        end_state   = READ;
-        code = fsm_run((Environment *)&env, &start_state, &end_state, transitions);
-        printf("In fork\n");
-        if(code != 0)
-        {
-            fprintf(stderr, "Cannot move from %d to %d\n", start_state, end_state);
-
-            return EXIT_FAILURE;
-        }
+        printf("in fork\n");
+        game_env->player2_turn = true;
+        printf("%d", game_env->player2_turn);
+        return READ;
     }
-
-
-//    fprintf(stderr, "Exiting state %d\n", start_state);
-    dc_close(player[0]);
-    dc_close(player[1]);
-
-    return EXIT_SUCCESS;
+    return READ;
 }
 
 static int read_input(Environment *env)
 {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
-
-    dc_read(player[game_env->player2_turn], game_env->c, sizeof(game_env));
+    char c[1];
+    dc_read(player[game_env->player2_turn], c, sizeof(c));
+    game_env->c = c[0];
     printf("Player wrote %c", game_env->c);
 
     if(game_env->c == EOF)
@@ -173,18 +183,19 @@ static int read_input(Environment *env)
 
 static int validate(Environment *env) {
     TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-    char pos[9] = {'A', 'B', 'C',
-                   'D', 'E', 'F',
-                   'G', 'H', 'I'};
-    for (int i = 0; i < sizeof(pos); i++) {
-        if (game_env->c != pos[i])
-            return ERROR;
-        else {
-            game_env->player2_turn = true; // switch to player 2
-            return READ;
-        }
+    game_env = (TTTEnvironment *) env;
+
+    if (game_env->c != 'A' || game_env->c != 'B' || game_env->c != 'C' ||
+        game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
+        game_env->c != 'G' || game_env->c != 'H' || game_env->c != 'I') {
+        game_env->error_code = 0;
+        return ERROR;
+    } else {
+        game_env->player2_turn = true; // switch to player 2
+        return READ;
     }
+
+    return READ;
 }
 
 static int write_code(Environment *env)
@@ -193,12 +204,12 @@ static int write_code(Environment *env)
     int              ret_val;
 
     echo_env = (TTTEnvironment *)env;
-    ret_val = putchar(echo_env->c);
+    //ret_val = putchar(echo_env->c);
 
-    if(ret_val == EOF)
+    /*if(ret_val == EOF)
     {
         return ERROR;
-    }
+    }*/
 
     return READ;
 }
@@ -240,14 +251,14 @@ static int read_error(Environment *env)
 
     echo_env = (TTTEnvironment *)env;
     //ret_val = echo_env->code;
-
+    return READ;
 }
 
 static int write_error(Environment *env)
 {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
-    char *mesg;
+    char *mesg = "";
     switch (game_env->error_code) {
         case 0:
             mesg = "Invalid move! Please enter again\n";

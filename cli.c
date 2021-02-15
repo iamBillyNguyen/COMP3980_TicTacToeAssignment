@@ -28,7 +28,7 @@ int main(int argc , char *argv[])
             {' ',' ',' '}
     };
 
-    hostinfo = dc_gethostbyname("23.16.22.78");
+    hostinfo = dc_gethostbyname("127.0.0.1");
     fd = dc_socket(AF_INET, SOCK_STREAM, 0);
     memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
@@ -45,20 +45,21 @@ int main(int argc , char *argv[])
         sprintf(pid,"%d",num1);
         dc_write(fd, pid, sizeof(pid));
         dc_read(fd,a,sizeof(a));
-        printf("%s\n",a[0]);
         printf("WELCOME TO BIT SERVER'S TIC TAC TOE!\n");
+        printf("%s\n",a[0]);
+
     }
 
     if(strcmp(a[1],"2")==0)
     {
         int num2 = getpid();
         sprintf(pid,"%d",num2);
-        write(fd, pid, sizeof(pid));
+        dc_write(fd, pid, sizeof(pid));
     }
 
     if (strcmp(a[1],"1")!=0) {
         for (;;) {
-            printf("\nPlayer %d,Please enter the number of the square where you want to place your '%c': \n",
+            printf("\nPlayer %d, please enter the number of the square where you want to place your '%c': \n",
                    (strcmp(a[1], "1") == 0) ? 1 : 2, (strcmp(a[1], "1") == 0) ? 'X' : 'O');
             scanf("%s", clientWrite);
             choice = atoi(clientWrite);
@@ -73,7 +74,7 @@ int main(int argc , char *argv[])
                 break;
             }
         }
-        write(fd, clientWrite, sizeof(clientWrite));
+        dc_write(fd, clientWrite, sizeof(clientWrite));
         system("clear");
     }
 
