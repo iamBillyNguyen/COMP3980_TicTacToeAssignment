@@ -84,9 +84,7 @@ int main()
                     { WRITE,      READ,       &read_input   },
                     { FSM_IGNORE, FSM_IGNORE, NULL  },
             };
-    char board[3][3] =   {{'A','B','C'},
-                          {'D','E','F'},
-                          {'G','H','I'}};
+
 
     int code;
     int start_state;
@@ -150,13 +148,13 @@ static int init_server(Environment *env) {
         }
     }
 
-    if (fork() == 0) {
-        printf("in fork\n");
+    // if (fork() == 0) {
+        // printf("in fork\n");
         game_env->player2_turn = true;
-        printf("%d", game_env->player2_turn);
+        printf("hello?%d", game_env->player2_turn);
         return READ;
-    }
-    return READ;
+    // }
+    // return READ;
 }
 
 static int read_input(Environment *env)
@@ -185,9 +183,9 @@ static int validate(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *) env;
 
-    if (game_env->c != 'A' || game_env->c != 'B' || game_env->c != 'C' ||
-        game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
-        game_env->c != 'G' || game_env->c != 'H' || game_env->c != 'I') {
+    if (game_env->c != '1' || game_env->c != '2' || game_env->c != '3' ||
+        game_env->c != '4' || game_env->c != '5' || game_env->c != '6' ||
+        game_env->c != '7' || game_env->c != '8' || game_env->c != '9') {
         game_env->error_code = 0;
         return ERROR;
     } else {

@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/billy/CLionProjects/COMP3980_Assignment1/serv.c" "/home/billy/CLionProjects/COMP3980_Assignment1/build/CMakeFiles/server.dir/serv.c.o"
+  "/home/tiffany/Documents/3980/COMP3980_Assignment1/serv.c" "/home/tiffany/Documents/3980/COMP3980_Assignment1/build/CMakeFiles/server.dir/serv.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 

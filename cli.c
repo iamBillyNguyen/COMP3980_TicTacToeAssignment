@@ -75,7 +75,7 @@ int main(int argc , char *argv[])
             }
         }
         dc_write(fd, clientWrite, sizeof(clientWrite));
-        system("clear");
+        // system("clear");
     }
 
     dc_close(fd);
