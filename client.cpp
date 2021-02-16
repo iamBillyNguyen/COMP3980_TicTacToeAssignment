@@ -93,6 +93,16 @@ int main(int argc, char *argv[])
 
     while (count < 9)
     {
+        if (strcmp(server_buffer, "----- You won! -----\n") == 0) {
+            break;
+        }
+        if (strcmp(server_buffer, "----- You lost! -----\n") == 0) {
+            break;
+        }
+        if (strcmp(server_buffer, "----- GAME TIES -----\n") == 0) {
+            break;
+        }
+        
         memset(&co_ordinates_buffer, 0, sizeof(co_ordinates_buffer));
         memset(&server_buffer, 0, sizeof(server_buffer));
 
@@ -115,7 +125,7 @@ int main(int argc, char *argv[])
                 perror("CO-ORDINATES BUFFER could not be sent!");
                 return 1;
             }
-            
+
         //}
 
         count++;
