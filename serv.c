@@ -69,9 +69,6 @@ char playBoard[3][3] = {{'A','B','C'},
 int main()
 {
     TTTEnvironment env;
-//    env.c = 'A';
-//    env.error_code = 0;
-//    env.player2_turn = false;
     StateTransition transitions[] =
             {
                     { FSM_INIT,    INIT_SERV,     &init_server  },
@@ -80,10 +77,8 @@ int main()
                     { READ,       VALIDATE,       &validate     },
                     {VALIDATE, ERROR,             &error        },
                     {VALIDATE, READ,              &read_input   },
-                    {VALIDATE, TIE_GAME,          &prompt       },
                     {ERROR,     READ,             &read_input   },
-                    { TIE_GAME,       FSM_EXIT,NULL      },
-                    {TIE_GAME, INIT_SERV, &init_server},
+                    {VALIDATE, INIT_SERV, &init_server},
                     { FSM_IGNORE, FSM_IGNORE, NULL  },
             };
 
@@ -178,7 +173,8 @@ static int validate(Environment *env) {
     char *win = "----- You won! -----\n";
     char *lose = "----- You lose! -----\n";
 
-    if (game_env->c != 'A' || game_env->c != 'B' || game_env->c != 'C') {
+    if (game_env->c < 'A' || game_env->c > 'I') {
+        printf("error\n");
         game_env->code = INVALID_MOVE;
         game_env->turn--;
         return ERROR;
@@ -202,14 +198,14 @@ static int validate(Environment *env) {
     char key = check(playBoard);
     if (key == 'X') {
         game_env->code = P1_WIN;
-        /*send(game_env->player[0], win, strlen(win), 0);
-        send(game_env->player[1], lose, strlen(lose), 0);*/
+        send(game_env->player[0], win, strlen(win), 0);
+        send(game_env->player[1], lose, strlen(lose), 0);
         printf("----- Player 1 won! -----\n");
         return INIT_SERV;
     } else if (key == 'O') {
         game_env->code = P2_WIN;
-        /*send(game_env->player[1], win, strlen(win), 0);
-        send(game_env->player[0], lose, strlen(lose), 0);*/
+        send(game_env->player[1], win, strlen(win), 0);
+        send(game_env->player[0], lose, strlen(lose), 0);
         printf("----- Player 2 won! -----\n");
         return INIT_SERV;
     }
@@ -260,10 +256,12 @@ char check(char playBoard[][3]) {
 
 static int error(Environment *env)
 {
-    TTTEnvironment *echo_env;
-    int              ret_val;
+    TTTEnvironment *game_env;
+    game_env = (TTTEnvironment *) env;
 
-    echo_env = (TTTEnvironment *)env;
-    //ret_val = echo_env->code;
+    if (game_env->code == INVALID_MOVE) {
+        char *mess = "Invalid move, place again!\n";
+        send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
+    }
     return READ;
 }
