@@ -58,9 +58,6 @@ int input(char choice[])
 	}
 	cout<<"Invalid input, use A-I!\n";
 	return -1;
-	
-
-
 }
 
 char check()
@@ -124,4 +121,25 @@ char check()
 	
 	return 'f';
 
+}
+
+void update_board(char c, char board[][3], char player) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (c == board[i][j]) {
+                board[i][j] = player;
+                break;
+            }
+        }
+    }
+    printf("\n _________________\n");
+    printf("|     |     |     | \n");
+    printf("|  %c  |  %c  |  %c  |\n", board[0][0], board[0][1], board[0][2]);
+    printf("|_____|_____|_____|\n");
+    printf("|     |     |     |\n");
+    printf("|  %c  |  %c  |  %c  |\n", board[1][0], board[1][1], board[1][2]);
+    printf("|_____|_____|_____|\n");
+    printf("|     |     |     |\n");
+    printf("|  %c  |  %c  |  %c  |\n", board[2][0], board[2][1], board[2][2]);
+    printf("|_____|_____|_____|\n");
 }

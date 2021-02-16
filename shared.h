@@ -16,6 +16,7 @@
 #define TIE '4'
 #define P1_TURN '5'
 #define P2_TURN '6'
+#define AWAITING "7"
 
 
 #endif
