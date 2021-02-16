@@ -29,6 +29,7 @@
 #include "shared.h"
 
 #define BACKLOG 2
+#define TOTAL_TURNS 9
 
 static int init_server(Environment *env);
 static int read_input(Environment *env);
@@ -38,16 +39,13 @@ static int prompt(Environment *env);
 static int read_error(Environment *env);
 static int write_error(Environment *env);
 
-int response_code = 0;
-
-
 typedef enum
 {
     INIT_SERV = FSM_APP_STATE_START,  // 2
     READ,
     WRITE,                       // 3
     VALIDATE,                    // 4
-    TIE,                         // 7
+    TIE_GAME,                         // 7
     ERROR,                       // 8
 } States;
 
@@ -56,13 +54,12 @@ typedef struct
 {
     Environment common;
     char c;
-    int error_code;
+    int code;
     bool player2_turn;
-    char buff[3][40];
+    char buff[3][2];
     int player[BACKLOG];
     struct sockaddr_in addr, player_addr[BACKLOG];
-    int sfd, slen;
-    int client_num;
+    int sfd, slen, client_num, turn;
 } TTTEnvironment;
 
 
@@ -95,6 +92,8 @@ int main()
     env.sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
 
     env.client_num = 0;
+    env.code = P1_TURN;
+    env.turn = 0;
 
     int code;
     int start_state;
@@ -130,16 +129,16 @@ static int init_server(Environment *env) {
         game_env->player[game_env->client_num] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->client_num], &game_env->slen);
         //game_env->player[game_env->client_num] = dc_accept(game_env->sfd, 0, 0);
         game_env->client_num++;
-        printf("%d\n", game_env->client_num);
         if (game_env->client_num == 1) {
             char *mess = "Awaiting for Player 2 ... \n";
             send(game_env->player[0], mess, strlen(mess), 0); // send message to player 1
         }
+
         printf("%d/2 Player has joined\n", game_env->client_num);
 
         if (game_env->client_num == BACKLOG) {
-            printf("Server is full\n");
             char *mess = "----- GAME BEGINS -----\n";
+            printf("%s", mess);
             send(game_env->player[0], mess, strlen(mess), 0); // send message to player 1
             send(game_env->player[1], mess, strlen(mess), 0); // send message to player 2
             game_env->player2_turn = false;
@@ -156,19 +155,10 @@ static int read_input(Environment *env)
     int turn = (game_env->player2_turn) ? 2 : 1;
 
     send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
-    if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 4, 0))
+    if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
         perror("recv");
-
+    game_env->turn++;
     printf("Player wrote %s", game_env->buff[turn]);
-//    if(game_env->c == EOF)
-//    {
-//        if(ferror(stdin))
-//        {
-//            return ERROR;
-//        }
-//        printf("EOF\n");
-//        return FSM_EXIT;
-//    }
 
     return VALIDATE;
 }
@@ -176,15 +166,24 @@ static int read_input(Environment *env)
 static int validate(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *) env;
-
-    if (game_env->c != '1' || game_env->c != '2' || game_env->c != '3' ||
-        game_env->c != '4' || game_env->c != '5' || game_env->c != '6' ||
-        game_env->c != '7' || game_env->c != '8' || game_env->c != '9') {
-        game_env->error_code = 0;
+    game_env->c = game_env->buff[(game_env->player2_turn) ? 2 : 1][0];
+    /*if ((game_env->c != 'A') || (game_env->c != 'B') || game_env->c != 'C' ||
+        game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
+        game_env->c != 'G' || game_env->c != 'H' || game_env->c != 'I') {
+        game_env->code = INVALID_MOVE;
+        game_env->turn--;
         return ERROR;
+    } else */
+    if (game_env->turn == TOTAL_TURNS) {
+        char *mess = "4";
+        send(game_env->player[0], mess, strlen(mess), 0);
+        send(game_env->player[0], mess, strlen(mess), 0);
+        return TIE_GAME;
+    }
+    if (game_env->player2_turn){
+        game_env->player2_turn = false; // switch to player 2
     } else {
-        game_env->player2_turn = true; // switch to player 2
-        return READ;
+        game_env->player2_turn = true;
     }
 
     return READ;
@@ -251,14 +250,13 @@ static int write_error(Environment *env)
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
     char *mesg = "";
-    switch (game_env->error_code) {
-        case 0:
+    switch (game_env->code) {
+        case INVALID_MOVE:
             mesg = "Invalid move! Please enter again\n";
             break;
         default:
             break;
     }
-    printf("ERROR: %s\n", game_env->buff[game_env->player2_turn ? 2 : 1]);
 
     return READ;
 }

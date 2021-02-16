@@ -36,9 +36,13 @@ int main(int argc , char *argv[])
 
     printf("WELCOME TO BIT SERVER'S TIC TAC TOE!\n");
 
-    while(dc_read(fd, buf, sizeof(buf)) || (num_read = dc_read(STDIN_FILENO, buf, BUF_SIZE)) > 0)
+    dc_read(fd, buf, sizeof(buf));
+    printf("%s",buf);
+    dc_read(fd, buf, sizeof(buf));
+    printf("%s",buf);
+
+    while((num_read = dc_read(STDIN_FILENO, buf, BUF_SIZE)) > 0)
     {
-        printf("%s\n",buf);
         dc_write(fd, buf, num_read);
     }
 

@@ -8,4 +8,16 @@
 // /etc/services
 #define PORT 4000
 
+typedef enum
+{
+    INVALID_MOVE,   // 0
+    VALID_MOVE,     // 1
+    P1_WIN,         // 2
+    P2_WIN,         // 3
+    TIE,            // 4
+    P1_TURN,        // 5
+    P2_TURN,        // 6
+
+} response_code;
+
 #endif
