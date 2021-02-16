@@ -153,8 +153,8 @@ static int read_input(Environment *env)
     game_env = (TTTEnvironment *)env;
     char *mess = "It's your turn, please place your move: ";
     int turn = (game_env->player2_turn) ? 2 : 1;
-
     send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
+
     if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
         perror("recv");
     game_env->turn++;
@@ -180,9 +180,12 @@ static int validate(Environment *env) {
         send(game_env->player[0], mess, strlen(mess), 0);
         return TIE_GAME;
     }
+    // VALID MOVE
     if (game_env->player2_turn){
         game_env->player2_turn = false; // switch to player 2
+        send(game_env->player[game_env->player2_turn], (const void *) P2_TURN, sizeof(VALID_MOVE), 0);
     } else {
+        send(game_env->player[game_env->player2_turn], (const void *) P1_TURN, sizeof(VALID_MOVE), 0);
         game_env->player2_turn = true;
     }
 
