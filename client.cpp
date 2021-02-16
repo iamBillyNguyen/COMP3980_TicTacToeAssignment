@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 		perror("Sorry. Could not connect to server.");
 
 		//THIS THIING ENDS CLIENT!
-			return 1;
+			//return 1;
 	}
 
 	//cout << "Enter your name : ";
