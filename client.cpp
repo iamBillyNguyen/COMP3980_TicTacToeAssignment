@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "tictac.h"
 #include "shared.h"
-#define IPADD 3232235940
 
  //#define SERV_HOST_ADDR "23.16.22.78"
 #define SERV_HOST_ADDR "127.0.0.1"
