@@ -30,9 +30,8 @@ using namespace std;
  */
 int main(int argc, char *argv[])
 {
-    int sockfd,  n, connectfd, bytes_sent, bytes_recvd;
+    int sockfd,  n, connectfd, bytes_sent;
     struct sockaddr_in serv_addr;
-    struct hostent *he;
     char x;
     int count = 0, inp, y, ni, inp_true = 0, toss;
     char buffer[2], server_buffer[BUFSIZ];
@@ -51,7 +50,6 @@ int main(int argc, char *argv[])
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
 
-    // serv_addr.sin_addr = *((struct in_addr *)he->h_addr);
     serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR);
     connectfd = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if (connectfd == -1)
