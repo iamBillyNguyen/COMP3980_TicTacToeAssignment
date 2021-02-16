@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 
         recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
         cout << server_buffer;
+        
 
         cin >> buffer;
 
