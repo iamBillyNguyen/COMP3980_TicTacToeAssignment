@@ -33,22 +33,19 @@
 
 static int init_server(Environment *env);
 static int read_input(Environment *env);
-static int write_code(Environment *env);
 static int validate(Environment *env);
 static int prompt(Environment *env);
-static int read_error(Environment *env);
-static int write_error(Environment *env);
+static int error(Environment *env);
 static void update_board(char c, char playBoard[][3], char player);
 char check (char playBoard[][3]);
 
 typedef enum
 {
     INIT_SERV = FSM_APP_STATE_START,  // 2
-    READ,
-    WRITE,                       // 3
-    VALIDATE,                    // 4
-    TIE_GAME,                         // 7
-    ERROR,                       // 8
+    READ,                             // 3
+    VALIDATE,                         // 4
+    TIE_GAME,                         // 5
+    ERROR,                            // 6
 } States;
 
 
@@ -77,18 +74,16 @@ int main()
 //    env.player2_turn = false;
     StateTransition transitions[] =
             {
-                    { FSM_INIT,    INIT_SERV,     &init_server   },
-                    { INIT_SERV,    READ,     &read_input   },
-                    { READ,       ERROR,      &read_error   },
-                    { READ,       VALIDATE,   &validate   },
-                    {VALIDATE, ERROR,          &write_error},
-                    {VALIDATE, READ,            &read_input},
-                    {VALIDATE, TIE_GAME, &prompt},
-                    {ERROR,     READ,           &read_input},
+                    { FSM_INIT,    INIT_SERV,     &init_server  },
+                    { INIT_SERV,    READ,         &read_input   },
+                    { READ,       ERROR,          &error        },
+                    { READ,       VALIDATE,       &validate     },
+                    {VALIDATE, ERROR,             &error        },
+                    {VALIDATE, READ,              &read_input   },
+                    {VALIDATE, TIE_GAME,          &prompt       },
+                    {ERROR,     READ,             &read_input   },
                     { TIE_GAME,       FSM_EXIT,NULL      },
                     {TIE_GAME, INIT_SERV, &init_server},
-                    { WRITE,      ERROR,      &write_error  },
-                    { WRITE,      READ,       &read_input   },
                     { FSM_IGNORE, FSM_IGNORE, NULL  },
             };
 
@@ -171,7 +166,7 @@ static int read_input(Environment *env)
         if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
             perror("recv");
         game_env->turn++;
-        printf("Player wrote %s", game_env->buff[turn]);
+        printf("Player %d wrote: %s", turn, game_env->buff[turn]);
     }
     return VALIDATE;
 }
@@ -180,21 +175,19 @@ static int validate(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *) env;
     game_env->c = game_env->buff[(game_env->player2_turn) ? 2 : 1][0];
-    char *win = "You won!\n";
-    char *lose = "You lose!\n";
+    char *win = "----- You won! -----\n";
+    char *lose = "----- You lose! -----\n";
 
-    /*if ((game_env->c != 'A') || (game_env->c != 'B') || game_env->c != 'C' ||
-        game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
-        game_env->c != 'G' || game_env->c != 'H' || game_env->c != 'I') {
+    if (game_env->c != 'A' || game_env->c != 'B' || game_env->c != 'C') {
         game_env->code = INVALID_MOVE;
         game_env->turn--;
         return ERROR;
-    } else */
+    }
     if (game_env->turn == TOTAL_TURNS) {
         char* mess = "----- GAME TIES -----\n";
         send(game_env->player[0], mess, strlen(mess), 0);
         send(game_env->player[1], mess, strlen(mess), 0);
-        return TIE_GAME;
+        return INIT_SERV;;
     }
     // VALID MOVE
     if (game_env->player2_turn){
@@ -211,12 +204,14 @@ static int validate(Environment *env) {
         game_env->code = P1_WIN;
         /*send(game_env->player[0], win, strlen(win), 0);
         send(game_env->player[1], lose, strlen(lose), 0);*/
-        printf("Player 1 won!\n");
+        printf("----- Player 1 won! -----\n");
+        return INIT_SERV;
     } else if (key == 'O') {
         game_env->code = P2_WIN;
         /*send(game_env->player[1], win, strlen(win), 0);
         send(game_env->player[0], lose, strlen(lose), 0);*/
-        printf("Player 2 won!\n");
+        printf("----- Player 2 won! -----\n");
+        return INIT_SERV;
     }
     /** RESET BUFFER */
     if (game_env->player2_turn) {
@@ -246,7 +241,7 @@ static void update_board(char c, char board[][3], char player) {
     printf("|_____|_____|_____|\n");
 }
 
-char check (char playBoard[][3]) {
+char check(char playBoard[][3]) {
     int i;
     char key = ' ';
 
@@ -263,53 +258,12 @@ char check (char playBoard[][3]) {
     return key;
 }
 
-
-static int write_code(Environment *env)
-{
-    TTTEnvironment *echo_env;
-    int              ret_val;
-
-    echo_env = (TTTEnvironment *)env;
-    //ret_val = putchar(echo_env->c);
-
-    /*if(ret_val == EOF)
-    {
-        return ERROR;
-    }*/
-
-    return READ;
-}
-
-static int prompt(Environment *env)
-{
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *) env;
-    printf("----- TIE -----\n");
-    return INIT_SERV;
-}
-
-static int read_error(Environment *env)
+static int error(Environment *env)
 {
     TTTEnvironment *echo_env;
     int              ret_val;
 
     echo_env = (TTTEnvironment *)env;
     //ret_val = echo_env->code;
-    return READ;
-}
-
-static int write_error(Environment *env)
-{
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-    char *mesg = "";
-    switch (game_env->code) {
-        case INVALID_MOVE:
-            mesg = "Invalid move! Please enter again\n";
-            break;
-        default:
-            break;
-    }
-
     return READ;
 }
