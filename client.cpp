@@ -23,7 +23,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "tictac.h"
-#define PORT "8080"
+#define PORT "8000"
 #define IPADD 3232235940
 
 // #define SERV_HOST_ADDR "23.16.22.78"
@@ -205,8 +205,8 @@ int main(int argc, char *argv[])
 
         cout << endl
              << "Your turn. Enter co-ordinates separated by a space : ";
-        cin >> x;
-        ni = input(x);
+        cin >> co_ordinates_buffer;
+        ni = input(co_ordinates_buffer);
         cout << "\n" << ni << "\n";
         if (ni == 0)
         {

@@ -46,12 +46,12 @@ void display()
 	}		
 }
 
-int input(char choice)
+int input(char choice[])
 {
 	char letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'};
 	bool flag = false;
 	for(int i = 0; i < 9; i++){
-		if(choice == letters[i]){
+		if(choice[0] == letters[i]){
 			flag = true;
 			return 0;
 		}

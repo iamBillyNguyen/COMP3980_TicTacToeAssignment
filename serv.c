@@ -78,8 +78,8 @@ int main()
                     {VALIDATE, ERROR,             &error        },
                     {VALIDATE, READ,              &read_input   },
                     {ERROR,     READ,             &read_input   },
-                    {VALIDATE, INIT_SERV, &init_server},
-                    { FSM_IGNORE, FSM_IGNORE, NULL  },
+                    {VALIDATE, INIT_SERV,         &init_server  },
+                    { FSM_IGNORE, FSM_IGNORE, NULL      },
             };
 
     env.addr.sin_family = AF_INET;
@@ -183,7 +183,7 @@ static int validate(Environment *env) {
         char* mess = "----- GAME TIES -----\n";
         send(game_env->player[0], mess, strlen(mess), 0);
         send(game_env->player[1], mess, strlen(mess), 0);
-        return INIT_SERV;;
+        return INIT_SERV;
     }
     // VALID MOVE
     if (game_env->player2_turn){
