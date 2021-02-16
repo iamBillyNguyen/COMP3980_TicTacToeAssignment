@@ -38,6 +38,7 @@ static int validate(Environment *env);
 static int prompt(Environment *env);
 static int read_error(Environment *env);
 static int write_error(Environment *env);
+static void update_board(char c, char playBoard[][3], char player);
 
 typedef enum
 {
@@ -53,7 +54,7 @@ typedef enum
 typedef struct
 {
     Environment common;
-    char c;
+    char c, player_c;
     int code;
     bool player2_turn;
     char buff[3][2];
@@ -61,6 +62,10 @@ typedef struct
     struct sockaddr_in addr, player_addr[BACKLOG];
     int sfd, slen, client_num, turn;
 } TTTEnvironment;
+
+char playBoard[3][3] = {{'A','B','C'},
+                        {'D','E','F'},
+                        {'G','H','I'}};
 
 
 int main()
@@ -94,6 +99,8 @@ int main()
     env.client_num = 0;
     env.code = P1_TURN;
     env.turn = 0;
+    env.buff[1][0] = '-';
+    env.buff[2][0] = '-';
 
     int code;
     int start_state;
@@ -142,6 +149,7 @@ static int init_server(Environment *env) {
             send(game_env->player[0], mess, strlen(mess), 0); // send message to player 1
             send(game_env->player[1], mess, strlen(mess), 0); // send message to player 2
             game_env->player2_turn = false;
+            game_env->c = 'X';
         }
     }
     return READ;
@@ -155,11 +163,12 @@ static int read_input(Environment *env)
     int turn = (game_env->player2_turn) ? 2 : 1;
     send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
 
-    if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
-        perror("recv");
-    game_env->turn++;
-    printf("Player wrote %s", game_env->buff[turn]);
-
+    if (game_env->buff[1][0] == '-' || game_env->buff[2][0] == '-') {
+        if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
+            perror("recv");
+        game_env->turn++;
+        printf("Player wrote %s", game_env->buff[turn]);
+    }
     return VALIDATE;
 }
 
@@ -167,6 +176,7 @@ static int validate(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *) env;
     game_env->c = game_env->buff[(game_env->player2_turn) ? 2 : 1][0];
+
     /*if ((game_env->c != 'A') || (game_env->c != 'B') || game_env->c != 'C' ||
         game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
         game_env->c != 'G' || game_env->c != 'H' || game_env->c != 'I') {
@@ -175,22 +185,47 @@ static int validate(Environment *env) {
         return ERROR;
     } else */
     if (game_env->turn == TOTAL_TURNS) {
-        char *mess = "4";
+        char* mess = "----- GAME TIES -----\n";
         send(game_env->player[0], mess, strlen(mess), 0);
-        send(game_env->player[0], mess, strlen(mess), 0);
+        send(game_env->player[1], mess, strlen(mess), 0);
         return TIE_GAME;
     }
     // VALID MOVE
     if (game_env->player2_turn){
-        game_env->player2_turn = false; // switch to player 2
-        send(game_env->player[game_env->player2_turn], (const void *) P2_TURN, sizeof(VALID_MOVE), 0);
+        game_env->player_c = 'O';
+        game_env->player2_turn = false; // switch to player 1
     } else {
-        send(game_env->player[game_env->player2_turn], (const void *) P1_TURN, sizeof(VALID_MOVE), 0);
+        game_env->player_c = 'X';
         game_env->player2_turn = true;
-    }
 
+        // reset buffer
+        game_env->buff[1][0] = '-';
+        game_env->buff[2][0] = '-';
+    }
+    update_board(game_env->c, playBoard, game_env->player_c);
     return READ;
 }
+static void update_board(char c, char board[][3], char player) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (c == board[i][j]) {
+                board[i][j] = player;
+                break;
+            }
+        }
+    }
+    printf(" _________________\n");
+    printf("|     |     |     | \n");
+    printf("|  %c  |  %c  |  %c  |\n", board[0][0], board[0][1], board[0][2]);
+    printf("|_____|_____|_____|\n");
+    printf("|     |     |     |\n");
+    printf("|  %c  |  %c  |  %c  |\n", board[1][0], board[1][1], board[1][2]);
+    printf("|_____|_____|_____|\n");
+    printf("|     |     |     |\n");
+    printf("|  %c  |  %c  |  %c  |\n", board[2][0], board[2][1], board[2][2]);
+    printf("|_____|_____|_____|\n");
+}
+
 
 static int write_code(Environment *env)
 {
