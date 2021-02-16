@@ -4,11 +4,10 @@
 
 using namespace std;
 
-char mat[3][3], p1, p2;
-void  init();
+
 void display();
 int input(char, int, int);
-char check();
+
 
 /**
  * Function to display the formatting of the tic tac toe game.
