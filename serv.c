@@ -91,13 +91,13 @@ int main()
     bzero(&(env.addr.sin_zero), 8);
     env.slen = sizeof(struct sockaddr_in);
     env.sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
-
-    env.client_num = 0;
-    env.code = P1_TURN;
-    env.turn = 0;
-    env.buff[1][0] = '-';
-    env.buff[2][0] = '-';
-
+    dc_bind(env.sfd, (struct sockaddr *)&env.addr, sizeof(struct sockaddr_in));
+    int enable = 1;
+    if(setsockopt(env.sfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        perror("setsockopt(SO_REUSEADDR)");
+    }
+    /** INIT FSM */
     int code;
     int start_state;
     int end_state;
@@ -123,8 +123,13 @@ int main()
 static int init_server(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
-    
-    dc_bind(game_env->sfd, (struct sockaddr *)&game_env->addr, sizeof(struct sockaddr_in));
+    game_env->client_num = 0;
+    game_env->code = P1_TURN;
+    game_env->turn = 0;
+    game_env->buff[1][0] = '-';
+    game_env->buff[2][0] = '-';
+    memset(&(game_env->player), 0, sizeof(game_env->player));
+
     printf("WELCOME TO BIT SERVER'S TIC TAC TOE GAME\n");
     printf("Waiting for Players to join ...\n");
     while (game_env->client_num < BACKLOG) {
@@ -209,17 +214,10 @@ static int validate(Environment *env) {
         game_env->code = P1_WIN;
         if (game_env->player2_turn){
             send(game_env->player[1], lose, strlen(lose), 0);
-            dc_close(game_env->player[1]);
         } else {
             send(game_env->player[0], win, strlen(win), 0);
-            dc_close(game_env->player[0]);
         }
         printf("----- Player 1 won! -----\n");
-        int enable = 1;
-        if(setsockopt(game_env->sfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-        {
-            perror("setsockopt(SO_REUSEADDR)");
-        }
         return INIT_SERV;
     } else if (key == 'O') {
         game_env->code = P2_WIN;

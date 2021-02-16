@@ -26,7 +26,7 @@
 #include "shared.h"
 #define IPADD 3232235940
 
-// #define SERV_HOST_ADDR "23.16.22.78"
+//#define SERV_HOST_ADDR "23.16.22.78"
 #define SERV_HOST_ADDR "127.0.0.1"
 using namespace std;
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
         if (strcmp(server_buffer, "----- GAME TIES -----\n") == 0) {
             break;
         }
-        
+
         memset(&co_ordinates_buffer, 0, sizeof(co_ordinates_buffer));
         memset(&server_buffer, 0, sizeof(server_buffer));
 
