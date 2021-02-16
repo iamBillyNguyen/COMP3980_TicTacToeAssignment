@@ -39,6 +39,7 @@ static int prompt(Environment *env);
 static int read_error(Environment *env);
 static int write_error(Environment *env);
 static void update_board(char c, char playBoard[][3], char player);
+char check (char playBoard[][3]);
 
 typedef enum
 {
@@ -81,9 +82,11 @@ int main()
                     { READ,       ERROR,      &read_error   },
                     { READ,       VALIDATE,   &validate   },
                     {VALIDATE, ERROR,          &write_error},
-                    {VALIDATE, READ, &read_input},
+                    {VALIDATE, READ,            &read_input},
+                    {VALIDATE, TIE_GAME, &prompt},
                     {ERROR,     READ,           &read_input},
-                    { TIE,       FSM_EXIT,NULL      },
+                    { TIE_GAME,       FSM_EXIT,NULL      },
+                    {TIE_GAME, INIT_SERV, &init_server},
                     { WRITE,      ERROR,      &write_error  },
                     { WRITE,      READ,       &read_input   },
                     { FSM_IGNORE, FSM_IGNORE, NULL  },
@@ -163,6 +166,7 @@ static int read_input(Environment *env)
     int turn = (game_env->player2_turn) ? 2 : 1;
     send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
 
+    // will not read if buffer is not "reset" or "empty"
     if (game_env->buff[1][0] == '-' || game_env->buff[2][0] == '-') {
         if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
             perror("recv");
@@ -176,6 +180,8 @@ static int validate(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *) env;
     game_env->c = game_env->buff[(game_env->player2_turn) ? 2 : 1][0];
+    char *win = "You won!\n";
+    char *lose = "You lose!\n";
 
     /*if ((game_env->c != 'A') || (game_env->c != 'B') || game_env->c != 'C' ||
         game_env->c != 'D' || game_env->c != 'E' || game_env->c != 'F' ||
@@ -197,12 +203,26 @@ static int validate(Environment *env) {
     } else {
         game_env->player_c = 'X';
         game_env->player2_turn = true;
+    }
 
-        // reset buffer
+    update_board(game_env->c, playBoard, game_env->player_c);
+    char key = check(playBoard);
+    if (key == 'X') {
+        game_env->code = P1_WIN;
+        /*send(game_env->player[0], win, strlen(win), 0);
+        send(game_env->player[1], lose, strlen(lose), 0);*/
+        printf("Player 1 won!\n");
+    } else if (key == 'O') {
+        game_env->code = P2_WIN;
+        /*send(game_env->player[1], win, strlen(win), 0);
+        send(game_env->player[0], lose, strlen(lose), 0);*/
+        printf("Player 2 won!\n");
+    }
+    /** RESET BUFFER */
+    if (game_env->player2_turn) {
         game_env->buff[1][0] = '-';
         game_env->buff[2][0] = '-';
     }
-    update_board(game_env->c, playBoard, game_env->player_c);
     return READ;
 }
 static void update_board(char c, char board[][3], char player) {
@@ -226,6 +246,23 @@ static void update_board(char c, char board[][3], char player) {
     printf("|_____|_____|_____|\n");
 }
 
+char check (char playBoard[][3]) {
+    int i;
+    char key = ' ';
+
+    // Check Rows
+    for (i=0; i<3;i++)
+        if (playBoard [i][0] == playBoard [i][1] && playBoard [i][0] == playBoard [i][2] && playBoard [i][0]) key = playBoard [i][0];
+    // check Columns
+    for (i=0; i<3;i++)
+        if (playBoard [0][i] == playBoard [1][i] && playBoard [0][i] == playBoard [2][i] && playBoard [0][i]) key = playBoard [0][i];
+    // Check Diagonals
+    if (playBoard [0][0] == playBoard [1][1] && playBoard [1][1] == playBoard [2][2] && playBoard [1][1]) key = playBoard [1][1];
+    if (playBoard [0][2] == playBoard [1][1] && playBoard [1][1] == playBoard [2][0] && playBoard [1][1]) key = playBoard [1][1];
+
+    return key;
+}
+
 
 static int write_code(Environment *env)
 {
@@ -245,32 +282,10 @@ static int write_code(Environment *env)
 
 static int prompt(Environment *env)
 {
-    char* prompt = "Prompt: Place a move\n";
-    TTTEnvironment *echo_env;
-    int              ret_val;
-
-    echo_env = (TTTEnvironment *)env;
-    /*ret_val = echo_env->code;
-    if (moves == 5) {
-        printf("==========TIE==========\n");
-        return FSM_EXIT;
-    }
-    switch (ret_val) {
-        case 400:
-            printf("Invalid player\n");
-            break;
-        case 401:
-            printf("Renter your move\n");
-            break;
-        case 402:
-            printf("Renter your move\n");
-            break;
-        default:
-            printf("%s", prompt);
-            break;
-    }
-    echo_env->code = 0;*/
-    return READ;
+    TTTEnvironment *game_env;
+    game_env = (TTTEnvironment *) env;
+    printf("----- TIE -----\n");
+    return INIT_SERV;
 }
 
 static int read_error(Environment *env)
