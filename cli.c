@@ -19,9 +19,7 @@ int main(int argc , char *argv[])
     int fd, row,column,choice;;
     ssize_t num_read;
     char buf[BUF_SIZE];
-    char a[2][40];
     char pid[4];
-    char clientWrite[1];
     char playBoard [3][3] =   {							// to display the actual game status
             {' ',' ',' '},
             {' ',' ',' '},
@@ -36,47 +34,15 @@ int main(int argc , char *argv[])
     addr.sin_addr = *(struct in_addr *) hostinfo->h_addr;
     dc_connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
 
-    dc_read(fd, a, sizeof(a));
-    printf("%s\n",a[0]);
+    printf("WELCOME TO BIT SERVER'S TIC TAC TOE!\n");
 
-    if(strcmp(a[1],"0")==0)
+    while(dc_read(fd, buf, sizeof(buf)) || (num_read = dc_read(STDIN_FILENO, buf, BUF_SIZE)) > 0)
     {
-        int num1 = getpid();
-        sprintf(pid,"%d",num1);
-        dc_write(fd, pid, sizeof(pid));
-        dc_read(fd,a,sizeof(a));
-        printf("WELCOME TO BIT SERVER'S TIC TAC TOE!\n");
-        printf("%s\n",a[0]);
-
+        printf("%s\n",buf);
+        dc_write(fd, buf, num_read);
     }
 
-    if(strcmp(a[1],"2")==0)
-    {
-        int num2 = getpid();
-        sprintf(pid,"%d",num2);
-        dc_write(fd, pid, sizeof(pid));
-    }
-
-    if (strcmp(a[1],"1")!=0) {
-        for (;;) {
-            printf("\nPlayer %d, please enter the number of the square where you want to place your '%c': \n",
-                   (strcmp(a[1], "1") == 0) ? 1 : 2, (strcmp(a[1], "1") == 0) ? 'X' : 'O');
-            scanf("%s", clientWrite);
-            choice = atoi(clientWrite);
-            row = --choice/3;
-            column = choice%3;
-            if(choice<0 || choice>9 || playBoard [row][column]>'9'|| playBoard [row][column]=='X' || playBoard [row][column]=='O')
-            printf("Invalid Input. Please Enter again.\n\n");
-
-            else
-            {
-                playBoard[row][column] = (strcmp(a[1], "1")==0)?'X':'O';
-                break;
-            }
-        }
-        dc_write(fd, clientWrite, sizeof(clientWrite));
-        // system("clear");
-    }
+    // system("clear");
 
     dc_close(fd);
 

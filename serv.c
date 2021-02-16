@@ -38,11 +38,8 @@ static int prompt(Environment *env);
 static int read_error(Environment *env);
 static int write_error(Environment *env);
 
-int id[BACKLOG], player[BACKLOG];
 int response_code = 0;
-char a[2][40];
-int sfd[BACKLOG], client_num = 0;
-char x[4];
+
 
 typedef enum
 {
@@ -61,15 +58,20 @@ typedef struct
     char c;
     int error_code;
     bool player2_turn;
+    char buff[3][40];
+    int player[BACKLOG];
+    struct sockaddr_in addr, player_addr[BACKLOG];
+    int sfd, slen;
+    int client_num;
 } TTTEnvironment;
 
 
 int main()
 {
     TTTEnvironment env;
-    env.c = 'A';
-    env.error_code = 0;
-    env.player2_turn = false;
+//    env.c = 'A';
+//    env.error_code = 0;
+//    env.player2_turn = false;
     StateTransition transitions[] =
             {
                     { FSM_INIT,    INIT_SERV,     &init_server   },
@@ -85,6 +87,14 @@ int main()
                     { FSM_IGNORE, FSM_IGNORE, NULL  },
             };
 
+    env.addr.sin_family = AF_INET;
+    env.addr.sin_port = htons(PORT);
+    env.addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    bzero(&(env.addr.sin_zero), 8);
+    env.slen = sizeof(struct sockaddr_in);
+    env.sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
+
+    env.client_num = 0;
 
     int code;
     int start_state;
@@ -102,8 +112,8 @@ int main()
     }
 
 //    fprintf(stderr, "Exiting state %d\n", start_state);
-    dc_close(player[0]);
-    dc_close(player[1]);
+    dc_close(env.player[0]);
+    dc_close(env.player[1]);
     return EXIT_SUCCESS;
 
 }
@@ -111,70 +121,54 @@ int main()
 static int init_server(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
+
+    dc_bind(game_env->sfd, (struct sockaddr *)&game_env->addr, sizeof(struct sockaddr_in));
     printf("WELCOME TO BIT SERVER'S TIC TAC TOE GAME\n");
     printf("Waiting for Players to join ...\n");
-    strcpy(a[0],"Waiting for the other Player to join\n");
-    struct sockaddr_in addr;
-
-
-    sfd[0] = dc_socket(AF_INET, SOCK_STREAM, 0);
-    memset(&addr, 0, sizeof(struct sockaddr_in));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    dc_bind(sfd[0], (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
-
-    while (client_num < BACKLOG) {
-        dc_listen(sfd[0], BACKLOG);
-
-        player[client_num] = dc_accept(sfd[0], 0, 0);
-        client_num++;
-        if (client_num == 1) {
-            strcpy(a[1], "0");
-            dc_write(player[0], a, sizeof(a));
-            dc_read(player[0], x, sizeof(x)); // read from player 1
-            id[0] = atoi(x);
+    while (game_env->client_num < BACKLOG) {
+        dc_listen(game_env->sfd, BACKLOG);
+        game_env->player[game_env->client_num] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->client_num], &game_env->slen);
+        //game_env->player[game_env->client_num] = dc_accept(game_env->sfd, 0, 0);
+        game_env->client_num++;
+        printf("%d\n", game_env->client_num);
+        if (game_env->client_num == 1) {
+            char *mess = "Awaiting for Player 2 ... \n";
+            send(game_env->player[0], mess, strlen(mess), 0); // send message to player 1
         }
-        printf("Player %d has joined\n", client_num);
+        printf("%d/2 Player has joined\n", game_env->client_num);
 
-        if (client_num == BACKLOG) {
-            strcpy(a[0],"-------- GAME BEGINS --------\n");
-            strcpy(a[1],"1");
-            dc_write(player[0],a,sizeof(a));
-            strcpy(a[1],"2");
-            dc_write(player[1],a,sizeof(a)); // read from player 2
-            dc_read(player[1],x,sizeof(x));
-            id[1]=atoi(x);
+        if (game_env->client_num == BACKLOG) {
+            printf("Server is full\n");
+            char *mess = "----- GAME BEGINS -----\n";
+            send(game_env->player[0], mess, strlen(mess), 0); // send message to player 1
+            send(game_env->player[1], mess, strlen(mess), 0); // send message to player 2
+            game_env->player2_turn = false;
         }
     }
-
-    // if (fork() == 0) {
-        // printf("in fork\n");
-        game_env->player2_turn = true;
-        printf("hello?%d", game_env->player2_turn);
-        return READ;
-    // }
-    // return READ;
+    return READ;
 }
 
 static int read_input(Environment *env)
 {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
-    char c[1];
-    dc_read(player[game_env->player2_turn], c, sizeof(c));
-    game_env->c = c[0];
-    printf("Player wrote %c", game_env->c);
+    char *mess = "It's your turn, please place your move: ";
+    int turn = (game_env->player2_turn) ? 2 : 1;
 
-    if(game_env->c == EOF)
-    {
-        if(ferror(stdin))
-        {
-            return ERROR;
-        }
-        printf("EOF\n");
-        return FSM_EXIT;
-    }
+    send(game_env->player[game_env->player2_turn], mess, strlen(mess), 0);
+    if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 4, 0))
+        perror("recv");
+
+    printf("Player wrote %s", game_env->buff[turn]);
+//    if(game_env->c == EOF)
+//    {
+//        if(ferror(stdin))
+//        {
+//            return ERROR;
+//        }
+//        printf("EOF\n");
+//        return FSM_EXIT;
+//    }
 
     return VALIDATE;
 }
@@ -264,7 +258,7 @@ static int write_error(Environment *env)
         default:
             break;
     }
-    dc_write(player[game_env->player2_turn], mesg, strlen(mesg));
+    printf("ERROR: %s\n", game_env->buff[game_env->player2_turn ? 2 : 1]);
 
     return READ;
 }
