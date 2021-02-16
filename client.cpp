@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include "tictac.h"
 #define PORT "8080"
-#define IPADD 3232235940
+// #define IPADD 3232235940
 #define SERV_HOST_ADDR "23.16.22.78"
 
 using namespace std;
