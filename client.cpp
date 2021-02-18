@@ -33,10 +33,10 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     char x;
     int count = 0, inp, y, ni, inp_true = 0, toss;
-    char buffer[2], server_buffer[BUFSIZ];
+    char buffer[1], server_buffer[1];
     char playBoard[3][3] = {{'A','B','C'},
-                        {'D','E','F'},
-                        {'G','H','I'}};
+                            {'D','E','F'},
+                            {'G','H','I'}};
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
@@ -58,41 +58,48 @@ int main(int argc, char *argv[])
     }
 
     display();
-    while (count < 9)
+    while (1)
     {
-        if (strcmp(server_buffer, "----- You won! -----\n") == 0) {
-            break;
-        }
-        if (strcmp(server_buffer, "----- You lost! -----\n") == 0) {
-            break;
-        }
-        if (strcmp(server_buffer, "----- GAME TIES -----\n") == 0) {
-            break;
-        }
-        
         memset(&buffer, 0, sizeof(buffer));
         memset(&server_buffer, 0, sizeof(server_buffer));
-
-        recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
-        cout << server_buffer;
         
+        // either response code or position
+        recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
 
-        cin >> buffer;
+        switch (server_buffer[0])
+        {
+            case '5':
+                printf("Your turn, place your move: ");
+                cin >> buffer;
 
+                std::cout << "sent " << buffer << " to server!" << endl;
+                bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
 
-            cout << "sent " << buffer << " to server!" << endl;
-            bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
-
-            if (bytes_sent == -1)
-            {
-                perror("Bytes could not be sent!");
-                return 1;
-            }
-
-        count++;
+                if (bytes_sent == -1)
+                {
+                    perror("Bytes could not be sent!");
+                    return 1;
+                }
+                count++; // TO KEEP TRACK OF 'X' & 'O'
+                break;
+            case '6':
+                printf("Please wait for your turn\n");
+                count++; // TO KEEP TRACK OF 'X' & 'O'
+                break;
+            case '7':
+                std::cout << "----- GAME BEGINS -----" << endl;
+                break;
+            default:
+                break;
+        }
+        /** UPDATE BOARD */
+        if (server_buffer[0] >= 'A' && server_buffer[0] <= 'I') {
+                char sym = (count % 2 != 0) ? 'X' : 'O';
+                update_board(server_buffer[0], playBoard, sym);
+        }
     }
 
-    cout << endl
+    std::cout << endl
          << "Thank You for playing Tic-tac-Toe" << endl;
     close(sockfd);
     return 0;

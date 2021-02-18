@@ -13,10 +13,9 @@
 #define VALID_MOVE '1'
 #define P1_WIN '2'
 #define P2_WIN '3'
-#define TIE '4'
-#define P1_TURN '5'
-#define P2_TURN '6'
-#define AWAITING "7"
-
+#define TIE "4"
+#define YES_TURN "5"
+#define NO_TURN "6"
+#define GAME_BEGIN "7"
 
 #endif
