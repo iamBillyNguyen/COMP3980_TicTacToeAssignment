@@ -19,7 +19,40 @@
 
 //#define SERV_HOST_ADDR "23.16.22.78"
 #define SERV_HOST_ADDR "127.0.0.1"
+#define BOARD_SIZE 3
 using namespace std;
+
+// gcc client.cpp -o client -lstdc++
+
+void reset_board(char b[][3]) {
+    for (int  i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (i == 0){
+                b[i][j] = 'A' + j;
+            } else if (i == 1) {
+                b[i][j] = 'D' + j;
+            } else {
+                b[i][j] = 'G' + j;
+            }
+        }
+    }
+}
+
+void check_opt(char choice, char b[][3]) {
+    while (1) {
+        if (choice == 'q') {
+            exit(EXIT_SUCCESS);
+        } else if (choice == 'r') {
+            reset_board(b);
+            break;
+        } else {
+            memset(&choice, 0, sizeof(choice));
+            printf("Invalid choice! Please re-enter\n");
+            printf("Type q to quit\nOR\nType r to replay\n>> ");
+            cin >> choice;
+        }
+    }
+}
 
 /**
  * Main loop to drive the client program
@@ -31,8 +64,8 @@ int main(int argc, char *argv[])
 {
     int sockfd,  n, connectfd, bytes_sent;
     struct sockaddr_in serv_addr;
-    char x;
-    int count = 0, inp, y, ni, inp_true = 0, toss;
+    char x[1];
+    int count = 0;
     char buffer[1], server_buffer[1];
     char playBoard[3][3] = {{'A','B','C'},
                             {'D','E','F'},
@@ -65,9 +98,58 @@ int main(int argc, char *argv[])
         
         // either response code or position
         recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
-
+        puts(server_buffer);
         switch (server_buffer[0])
         {
+            case '0':
+                printf("Invalid move! Re-enter: ");
+                cin >> buffer;
+                std::cout << "sent " << buffer << " to server!" << endl;
+                bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
+
+                if (bytes_sent == -1)
+                {
+                    perror("Bytes could not be sent!");
+                    return 1;
+                }
+                break;
+            case '1':
+                break;
+            case '2':
+                printf("----- YOU WON! -----\n");
+                printf("Type q to quit\nOR\nType r to replay\n>> ");
+                cin >> x;
+                check_opt(x[0], playBoard);
+                bytes_sent = send(sockfd, &x, sizeof(x), 0);
+
+                if (bytes_sent == -1)
+                {
+                    perror("Bytes could not be sent!");
+                    return 1;
+                }
+                count = 0;
+                break;
+            case '3':
+                printf("----- YOU LOST! -----\n");
+                printf("Type q to quit\nOR\nType r to replay\n>> ");
+                cin >> x;
+                check_opt(x[0], playBoard);
+                bytes_sent = send(sockfd, &x, sizeof(x), 0);
+
+                if (bytes_sent == -1)
+                {
+                    perror("Bytes could not be sent!");
+                    return 1;
+                }
+                count = 0;
+                break;
+            case '4':
+                printf("----- TIE -----\n");
+                printf("Type q to quit\nOR\nType r to replay\n>> ");
+                cin >> x;
+                check_opt(x[0], playBoard);
+                count = 0;
+                break;
             case '5':
                 printf("Your turn, place your move: ");
                 cin >> buffer;
@@ -97,6 +179,7 @@ int main(int argc, char *argv[])
                 char sym = (count % 2 != 0) ? 'X' : 'O';
                 update_board(server_buffer[0], playBoard, sym);
         }
+        fflush(STDIN_FILENO);
     }
 
     std::cout << endl

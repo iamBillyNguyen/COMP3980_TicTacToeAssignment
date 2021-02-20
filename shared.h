@@ -6,13 +6,13 @@
 
 // https://www.sciencedirect.com/topics/computer-science/registered-port#:~:text=Ports%200%20through%201023%20are,be%20used%20dynamically%20by%20applications.
 // /etc/services
-#define PORT 8080
+#define PORT 8000
 
 
-#define INVALID_MOVE '0'
-#define VALID_MOVE '1'
-#define P1_WIN '2'
-#define P2_WIN '3'
+#define INVALID_MOVE "0"
+#define WAIT "1"
+#define WIN "2"
+#define LOSE "3"
 #define TIE "4"
 #define YES_TURN "5"
 #define NO_TURN "6"
