@@ -31,6 +31,7 @@
 #define TOTAL_TURNS 9
 
 static int init_server(Environment *env);
+static int awaiting_new_player(Environment *env);
 static int read_input(Environment *env);
 static int validate(Environment *env);
 static int error(Environment *env);
@@ -38,13 +39,19 @@ static void update_board(char c, char playBoard[][3], char player, Environment *
 char check(char playBoard[][3]);
 static void check_user_choice(Environment *env);
 
+/**
+ * NOTE:
+ * - Server is not able to update current board to newly joined player... they can only
+ * tell if the move is invalid or not. :(
+ */
+
 typedef enum
 {
     INIT_SERV = FSM_APP_STATE_START, // 2
     READ,                            // 3
     VALIDATE,                        // 4
     ERROR,                           // 5
-    IDLE                             // 6
+    MIDGAME_QUIT                             // 6
 } States;
 
 typedef struct
@@ -78,6 +85,9 @@ int main()
             {VALIDATE, READ, &read_input},
             {ERROR, READ, &read_input},
             {VALIDATE, INIT_SERV, &init_server},
+            {VALIDATE, MIDGAME_QUIT, &awaiting_new_player},
+            {READ, MIDGAME_QUIT, &awaiting_new_player},
+            {MIDGAME_QUIT, READ, &read_input},
             {FSM_IGNORE, FSM_IGNORE, NULL},
         };
 
@@ -186,6 +196,34 @@ static int init_server(Environment *env)
     return READ;
 }
 
+static int awaiting_new_player(Environment *env) {
+    TTTEnvironment *game_env;
+    game_env = (TTTEnvironment *)env;
+    while (game_env->client_num < BACKLOG) {
+        char* mess = MIDGAME_QUIT;
+        dc_listen(game_env->sfd, BACKLOG);
+        game_env->player[game_env->client_num] = dc_accept(game_env->sfd,(struct sockaddr *) &game_env->player_addr[game_env->client_num],
+                                                           &game_env->slen);
+        game_env->client_num++;
+        printf("%d/2 Player has joined\n", game_env->client_num);
+        if (game_env->player2_turn)
+        {
+            game_env->player2_turn = false; // switch to player 1
+            send(game_env->player[0], mess1, strlen(mess1), 0);
+            send(game_env->player[1], mess2, strlen(mess2), 0);
+
+        }
+        else
+        {
+            game_env->player2_turn = true;
+            send(game_env->player[1], mess1, strlen(mess1), 0);
+            send(game_env->player[0], mess2, strlen(mess2), 0);
+
+        }
+    }
+    return READ;
+}
+
 static int read_input(Environment *env)
 {
     TTTEnvironment *game_env;
@@ -196,10 +234,15 @@ static int read_input(Environment *env)
     // will not read if buffer is not "reset" or "empty"
     if (game_env->buff[1][0] == '-' || game_env->buff[2][0] == '-')
     {   
-        if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0))
-            printf("A player has quit!\nAwaiting for new player to connect as Player %d", (int)(game_env->player2_turn + 1));
-        game_env->turn++;
-        printf("Player %d wrote: %c\n", turn, game_env->buff[turn][0]);
+        if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0)) {
+            printf("A player has quit!\nAwaiting for new player to connect as Player %d\n",
+                   (int) (game_env->player2_turn + 1));
+            game_env->client_num--;
+            return MIDGAME_QUIT;
+        } else {
+            game_env->turn++;
+            printf("Player %d wrote: %c\n", turn, game_env->buff[turn][0]);
+        }
     }
     return VALIDATE;
 }
@@ -214,7 +257,7 @@ static int validate(Environment *env)
         printf("Player quits midgame\n");
         // Accept a new player
         //game_env->player[game_env->player2_turn] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->player2_turn], &(game_env->slen));
-        return INIT_SERV;
+        return MIDGAME_QUIT;
     }
     if (game_env->c < 'A' || game_env->c > 'I')
     {
@@ -286,9 +329,10 @@ static int validate(Environment *env)
     if (game_env->turn == TOTAL_TURNS)
     {
         printf("----- GAME TIES -----\n");
-        char* mess = TIE;
-        send(game_env->player[1], mess, strlen(mess), 0);
-        send(game_env->player[0], mess, strlen(mess), 0);
+        game_env->code[0] = TIE[0];
+        send(game_env->player[1], TIE, strlen(TIE), 0);
+        send(game_env->player[0], TIE, strlen(TIE), 0);
+        check_user_choice(env);
         return INIT_SERV;
     }
 
@@ -391,7 +435,9 @@ static void check_user_choice(Environment *env) {
         memset(&(game_env->player[1]), 0, sizeof(game_env->player[1]));
         player_num--;
     }
-    if (player_num <= 1) {
+    if (player_num == 1) {
         game_env->client_num--;
+    } else if (player_num == 0){
+        game_env->client_num = 0;
     }
 }

@@ -44,6 +44,7 @@ void check_opt(char choice, char b[][3]) {
             exit(EXIT_SUCCESS);
         } else if (choice == 'r') {
             reset_board(b);
+            printf("Awaiting player to join ...\n");
             break;
         } else {
             memset(&choice, 0, sizeof(choice));
