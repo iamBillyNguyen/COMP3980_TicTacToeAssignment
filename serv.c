@@ -24,10 +24,11 @@
 #include <dc/sys/socket.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include "shared.h"
 
-#define BACKLOG 100
+#define BACKLOG 2
 #define TOTAL_TURNS 9
 
 static int init_server(Environment *env);
@@ -169,29 +170,48 @@ static int init_server(Environment *env)
 {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
+    fd_set readfds;
+    int max_sd, retval;
 
     reset_game(env);
 
     printf("----- BIT SERVER'S TIC TAC TOE GAME -----\n");
+    while (1) {
+        FD_ZERO(&readfds);
+        // Adding server socket to set
+        FD_SET(game_env->sfd, &readfds);
+        max_sd = game_env->sfd;
+        // Adding child socket to set
+        //while (game_env->client_num < BACKLOG) {
+            printf("Waiting for Players to join ...\n");
+            dc_listen(game_env->sfd, BACKLOG);
 
-    while (game_env->client_num < BACKLOG)
-    {
-        printf("Waiting for Players to join ...\n");
-        dc_listen(game_env->sfd, BACKLOG);
-        game_env->player[game_env->client_num] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->client_num], &game_env->slen);
-        //game_env->player[game_env->client_num] = dc_accept(game_env->sfd, 0, 0);
-        game_env->client_num++;
-
-        printf("%d/2 Player has joined\n", game_env->client_num);
+            //FD_SET(game_env->player[game_env->client_num], &readfds);
+            //game_env->client_num++;
+            //printf("%d/2 Player has joined\n", game_env->client_num);
 
 //        if (game_env->client_num == BACKLOG)
 //        {
 //            start_game(env);
 //        }
-    }
-    if (game_env->client_num % 2 == 0 && game_env->client_num != 0)
-    {
+        //}
+        //if (game_env->client_num % 2 == 0 && game_env->client_num != 0) {
+            //start_game(env);
+        //}
+        retval = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+        if (retval == -1) {
+            perror("select");
+            exit(EXIT_FAILURE);
+        }
+        for (int i = 0; i < BACKLOG; i++) {
+            if (FD_ISSET(game_env->sfd, &readfds)) {
+                FD_SET(game_env->player[i], &readfds);
+                game_env->player[i] = dc_accept(game_env->sfd,(struct sockaddr *) &game_env->player_addr[game_env->client_num],
+                                                                   &game_env->slen);
+            }
+        }
         start_game(env);
+        return READ;
     }
     return READ;
 }
