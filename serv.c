@@ -183,31 +183,32 @@ static int init_server(Environment *env)
         max_sd = game_env->sfd;
         // Adding child socket to set
 //        while (game_env->client_num < BACKLOG) {
-//            printf("Waiting for Players to join ...\n");
-//            dc_listen(game_env->sfd, BACKLOG);
+        if (game_env->client_num != BACKLOG) {
+            printf("Waiting for Players to join ...\n");
+            dc_listen(game_env->sfd, BACKLOG);
+
 //
 //            FD_SET(game_env->player[game_env->client_num], &readfds);
 //            game_env->client_num++;
 //            printf("%d/2 Player has joined\n", game_env->client_num);
 //
-//        if (game_env->client_num == BACKLOG)
-//        {
-//            start_game(env);
-//        }
 //        }
 //        if (game_env->client_num % 2 == 0 && game_env->client_num != 0) {
 //            start_game(env);
 //        }
-//        retval = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-//        if (retval == -1) {
-//            perror("select");
-//            exit(EXIT_FAILURE);
-//        }
-        for (int i = 0; i < BACKLOG; i++) {
-            if (FD_ISSET(game_env->sfd, &readfds)) {
-                FD_SET(game_env->player[i], &readfds); // Adding players to socket
-                game_env->player[i] = dc_accept(game_env->sfd,(struct sockaddr *) &game_env->player_addr[game_env->client_num],
-                                                                   &game_env->slen);
+            retval = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+            if (retval == -1) {
+                perror("select");
+                exit(EXIT_FAILURE);
+            }
+            for (int i = 0; i < BACKLOG; i++) {
+                if (FD_ISSET(game_env->sfd, &readfds)) {
+                    FD_SET(game_env->player[i], &readfds); // Adding players to socket
+                    game_env->player[i] = dc_accept(game_env->sfd,
+                                                    (struct sockaddr *) &game_env->player_addr[game_env->client_num],
+                                                    &game_env->slen);
+                }
+                game_env->client_num++;
             }
         }
         start_game(env);
