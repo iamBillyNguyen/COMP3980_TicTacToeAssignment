@@ -53,6 +53,7 @@ void check_opt(char choice, char b[][3]) {
             cin >> choice;
         }
     }
+    display();
 }
 
 /**

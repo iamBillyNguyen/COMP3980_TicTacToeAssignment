@@ -27,7 +27,7 @@
 #include <netinet/in.h>
 #include "shared.h"
 
-#define BACKLOG 2
+#define BACKLOG 100
 #define TOTAL_TURNS 9
 
 static int init_server(Environment *env);
@@ -189,7 +189,7 @@ static int init_server(Environment *env)
 //            start_game(env);
 //        }
     }
-    if (game_env->client_num == BACKLOG)
+    if (game_env->client_num % 2 == 0 && game_env->client_num != 0)
     {
         start_game(env);
     }
