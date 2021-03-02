@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     {
         memset(&buffer, 0, sizeof(buffer));
         memset(&server_buffer, 0, sizeof(server_buffer));
-        
+
         // either response code or position
         recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
         puts(server_buffer);

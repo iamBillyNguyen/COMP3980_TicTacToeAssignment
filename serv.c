@@ -25,6 +25,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include "shared.h"
 
@@ -40,6 +41,7 @@ static int error(Environment *env);
 static void update_board(char c, char playBoard[][3], char player, Environment *env);
 char check(char playBoard[][3]);
 static void check_user_choice(Environment *env);
+static int handle_move(Environment *env);
 
 /**
  * NOTE:
@@ -53,7 +55,8 @@ typedef enum
     READ,                            // 3
     VALIDATE,                        // 4
     ERROR,                           // 5
-    MIDGAME_QUIT                             // 6
+    MIDGAME_QUIT,                    // 6
+    SELECT
 } States;
 
 typedef struct
@@ -93,20 +96,10 @@ int main()
             {FSM_IGNORE, FSM_IGNORE, NULL},
         };
 
-    env.addr.sin_family = AF_INET;
-    env.addr.sin_port = htons(PORT);
-    env.addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    bzero(&(env.addr.sin_zero), 8);
-    env.slen = sizeof(struct sockaddr_in);
-    env.sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
-    dc_bind(env.sfd, (struct sockaddr *)&env.addr, sizeof(struct sockaddr_in));
-    int enable = 1;
-    if(setsockopt(env.sfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-    {
-        perror("setsockopt(SO_REUSEADDR)");
-    }
-
     env.client_num = 0; // VERY START OF GAME
+    for (int i = 0; i < BACKLOG; i++) {
+        env.player[i] = 0;
+    }
 
     /** INIT FSM */
     int code;
@@ -167,55 +160,177 @@ void start_game(Environment *env) {
     send(game_env->player[1], mess2, strlen(mess2), 0);
 }
 
-static int init_server(Environment *env)
-{
+static int init_server(Environment *env) {
     TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-    fd_set readfds;
-    int max_sd, retval, i;
+    game_env = (TTTEnvironment *) env;
+    fd_set readfds, workingfds;
+    int max_sd, retval, rc, enable = 1, i, new_sd, close_conn, desc;
 
     reset_game(env);
 
+    game_env->sfd = dc_socket(AF_INET, SOCK_STREAM, 0);
+    if (setsockopt(game_env->sfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+        perror("setsockopt(SO_REUSEADDR)");
+    }
+//    rc = ioctl(game_env->sfd, FIONBIO, (char *) &enable);
+//    if (rc < 0) {
+//        perror("ioctl() failed");
+//        close(game_env->sfd);
+//        exit(-1);
+//    }
+
+    game_env->addr.sin_family = AF_INET;
+    game_env->addr.sin_port = htons(PORT);
+    game_env->addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    bzero(&(game_env->addr.sin_zero), 8);
+    game_env->slen = sizeof(struct sockaddr_in);
+
+    dc_bind(game_env->sfd, (struct sockaddr *) &game_env->addr, sizeof(struct sockaddr_in));
+    dc_listen(game_env->sfd, BACKLOG);
+
     printf("----- BIT SERVER'S TIC TAC TOE GAME -----\n");
     printf("Waiting for Players to join ...\n");
-    dc_listen(game_env->sfd, BACKLOG);
+
     FD_ZERO(&readfds);
-    // Adding server socket to set
     FD_SET(game_env->sfd, &readfds);
     max_sd = game_env->sfd;
+
     while (1) {
+        memcpy(&workingfds, &readfds, sizeof(readfds));
         // Adding child socket to set
-        retval = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-        if (retval == -1) {
+        if (game_env->client_num == BACKLOG) {
+            send(game_env->player[game_env->player2_turn], mess1, strlen(mess1), 0);
+            send(game_env->player[!game_env->player2_turn], mess2, strlen(mess2), 0);
+
+        }
+
+        retval = select(max_sd + 1, &workingfds, NULL, NULL, NULL);
+        if (retval < 0) {
             perror("select");
             exit(EXIT_FAILURE);
         }
-        for (i = 0; i < BACKLOG; i++) {
-            if (FD_ISSET(game_env->sfd, &readfds)) {
-                game_env->player[i] = dc_accept(game_env->sfd,
-                                                (struct sockaddr *) &game_env->player_addr[game_env->client_num],
-                                                &game_env->slen);
-                FD_SET(game_env->player[i], &readfds); // Adding players to socket
+        if (retval == 0) {
+            break;
+        }
+
+        desc = retval;
+        for (i = 0; i <= max_sd && desc > 0; ++i) {
+            if (FD_ISSET(i, &workingfds)) {
+                desc -= 1;
+                if (i == game_env->sfd) {
+                    printf("  Listening socket is readable\n");
+                    do {
+                        if (game_env->client_num == BACKLOG) {
+                            game_env->player2_turn = false;
+                            break;
+                        }
+                        new_sd = dc_accept(game_env->sfd, NULL, NULL);
+                        if (new_sd < 0) {
+                            perror("  accept() failed");
+                            break;
+                        }
+                        printf("  New incoming connection - %d\n", new_sd);
+                        FD_SET(new_sd, &readfds);
+                        game_env->client_num++;
+                        if (new_sd > max_sd)
+                            max_sd = new_sd;
+                        game_env->player[game_env->player2_turn] = new_sd;
+                        game_env->player2_turn = !game_env->player2_turn;
+                    } while (new_sd != -1);
+                } else {
+                    printf("  Descriptor %d is readable\n", i);
+                    close_conn = 0;
+                    do {
+                        if (i > game_env->sfd) {
+//                            printf("player 2 turn? %d\n", game_env->player2_turn);
+//                            if (!game_env->player2_turn) {
+//                                rc = recv(game_env->player[game_env->player2_turn],
+//                                          game_env->buff[game_env->player2_turn ? 2 : 1],
+//                                          sizeof(game_env->buff[game_env->player2_turn ? 2 : 1]), 0);
+//                            } else {
+//                                rc = recv(game_env->player[game_env->player2_turn],
+//                                          game_env->buff[!game_env->player2_turn ? 2 : 1],
+//                                          sizeof(game_env->buff[!game_env->player2_turn ? 2 : 1]), 0);
+//                            }
+//                            game_env->player2_turn = !game_env->player2_turn;
+//                            if (rc < 0) {
+//                                perror("recv\n");
+//                                break;
+//                            }
+//                            if (rc == 0) {
+//                                printf("  Connection closed\n");
+//                                close_conn = 1;
+//                                break;
+//                            }
+//                            printf("  %d bytes received\n", rc);
+//
+//                            return VALIDATE;
+//                            /*rc = send(i, game_env->buff[1], rc, 0);
+//                            if (rc < 0) {
+//                                perror("  send() failed");
+//                                close_conn = 1;
+//                                break;
+//                            }*/
+//
+//                        } else {
+//                            break;
+//                        }
+                            return READ;
+                        }
+                    } while (1);
+                    if (close_conn) {
+                        close(i);
+                        FD_CLR(i, &readfds);
+                        if (i == max_sd) {
+                            while (FD_ISSET(max_sd, &readfds) == 0)
+                                max_sd -= 1;
+                        }
+                    }
+                }
+//            if (FD_ISSET(game_env->sfd, &readfds)) {
+//                if (game_env->player[i] == 0) {
+//                    game_env->player[i] = dc_accept(game_env->sfd,
+//                                                    (struct sockaddr *) &game_env->player_addr[game_env->client_num],
+//                                                    &game_env->slen);
+//                    FD_SET(game_env->player[i], &readfds); // Adding players to socket
+//                    send(game_env->player[game_env->player2_turn], mess1, strlen(mess1), 0);
+//                    send(game_env->player[1], mess2, strlen(mess2), 0);
+//                    break;
+//                }
+//            }
 
             }
-            game_env->client_num++;
         }
-        start_game(env);
-        int count = 0;
-        for (i = 0; i < BACKLOG; i++) {
-            if (FD_ISSET(game_env->player[i], &readfds)) {
-                count++;
-            } else {
-                printf("FD_CLR\n");
-                FD_CLR(game_env->player[i], &readfds);
-            }
-            if (count == BACKLOG) {
-                return READ;
-            }
-        }
+//        for (i = game_env->client_num++; i < BACKLOG; i++) {
+//            if (FD_ISSET(game_env->player[i], &readfds)) {
+////                count++;
+//                recv(game_env->player[game_env->player2_turn], game_env->buff[game_env->player2_turn ? 2 : 1], 2, 0);
+//                printf("%c\n", game_env->buff[game_env->player2_turn ? 2 : 1][0]);
+//                game_env->player2_turn = !game_env->player2_turn;
+//
+//            } else {
+//                printf("FD_CLR\n");
+//                FD_CLR(game_env->player[i], &readfds);
+//            }
+////            if (count == BACKLOG) {
+////                return READ;
+////            }
+//        }
+//        game_env->client_num++;
+//        if (game_env->client_num == BACKLOG) {
+//            game_env->client_num = 0;
+//        }
+//    } while (1);
+//    return READ;
     }
-    return READ;
 }
+
+//static int handle_move(Environment *env) {
+//    TTTEnvironment *game_env;
+//    game_env = (TTTEnvironment *)env;
+//
+//
+//}
 
 static int awaiting_new_player(Environment *env) {
     TTTEnvironment *game_env;
@@ -254,7 +369,7 @@ static int read_input(Environment *env)
 
     // will not read if buffer is not "reset" or "empty"
     if (game_env->buff[1][0] == '-' || game_env->buff[2][0] == '-')
-    {   
+    {
         if (!recv(game_env->player[game_env->player2_turn], game_env->buff[turn], 2, 0)) {
             printf("A player has quit!\nAwaiting for new player to connect as Player %d\n",
                    (int) (game_env->player2_turn + 1));
