@@ -76,7 +76,7 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/billy/CLionProjects/COMP3980_Assignment1/serv.c">
+		<Unit filename="/home/billy/CLionProjects/COMP3980_Assignment1/server.c">
 			<Option target="server"/>
 		</Unit>
 		<Unit filename="/home/billy/CLionProjects/COMP3980_Assignment1/CMakeLists.txt">

@@ -143,32 +143,32 @@ server/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/build
 .PHONY : server/fast
 
-serv.o: serv.c.o
+server.o: server.c.o
 
-.PHONY : serv.o
+.PHONY : server.o
 
 # target to build an object file
-serv.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/serv.c.o
-.PHONY : serv.c.o
+server.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/server.c.o
+.PHONY : server.c.o
 
-serv.i: serv.c.i
+server.i: server.c.i
 
-.PHONY : serv.i
+.PHONY : server.i
 
 # target to preprocess a source file
-serv.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/serv.c.i
-.PHONY : serv.c.i
+server.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/server.c.i
+.PHONY : server.c.i
 
-serv.s: serv.c.s
+server.s: server.c.s
 
-.PHONY : serv.s
+.PHONY : server.s
 
 # target to generate assembly for a file
-serv.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/serv.c.s
-.PHONY : serv.c.s
+server.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/server.c.s
+.PHONY : server.c.s
 
 # Help Target
 help:
@@ -179,9 +179,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... server"
-	@echo "... serv.o"
-	@echo "... serv.i"
-	@echo "... serv.s"
+	@echo "... server.o"
+	@echo "... server.i"
+	@echo "... server.s"
 .PHONY : help
 
 

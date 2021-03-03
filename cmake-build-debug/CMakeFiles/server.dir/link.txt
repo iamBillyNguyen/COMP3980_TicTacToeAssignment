@@ -1,1 +1,1 @@
-/usr/bin/cc -g   CMakeFiles/server.dir/serv.c.o  -o server   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib -ldcfsm -ldc 
+/usr/bin/cc -g   CMakeFiles/server.dir/server.c.o  -o server   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib -ldcfsm -ldc 

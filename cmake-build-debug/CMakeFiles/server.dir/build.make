@@ -77,27 +77,27 @@ include CMakeFiles/server.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/server.dir/flags.make
 
-CMakeFiles/server.dir/serv.c.o: CMakeFiles/server.dir/flags.make
-CMakeFiles/server.dir/serv.c.o: ../serv.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/billy/CLionProjects/COMP3980_Assignment1/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/server.dir/serv.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/server.dir/serv.c.o   -c /home/billy/CLionProjects/COMP3980_Assignment1/serv.c
+CMakeFiles/server.dir/server.c.o: CMakeFiles/server.dir/flags.make
+CMakeFiles/server.dir/server.c.o: ../server.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/billy/CLionProjects/COMP3980_Assignment1/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/server.dir/server.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/server.dir/server.c.o   -c /home/billy/CLionProjects/COMP3980_Assignment1/server.c
 
-CMakeFiles/server.dir/serv.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/server.dir/serv.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/billy/CLionProjects/COMP3980_Assignment1/serv.c > CMakeFiles/server.dir/serv.c.i
+CMakeFiles/server.dir/server.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/server.dir/server.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/billy/CLionProjects/COMP3980_Assignment1/server.c > CMakeFiles/server.dir/server.c.i
 
-CMakeFiles/server.dir/serv.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/server.dir/serv.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/billy/CLionProjects/COMP3980_Assignment1/serv.c -o CMakeFiles/server.dir/serv.c.s
+CMakeFiles/server.dir/server.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/server.dir/server.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/billy/CLionProjects/COMP3980_Assignment1/server.c -o CMakeFiles/server.dir/server.c.s
 
 # Object files for target server
 server_OBJECTS = \
-"CMakeFiles/server.dir/serv.c.o"
+"CMakeFiles/server.dir/server.c.o"
 
 # External object files for target server
 server_EXTERNAL_OBJECTS =
 
-server: CMakeFiles/server.dir/serv.c.o
+server: CMakeFiles/server.dir/server.c.o
 server: CMakeFiles/server.dir/build.make
 server: CMakeFiles/server.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/billy/CLionProjects/COMP3980_Assignment1/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C executable server"

@@ -238,7 +238,6 @@ static int accept_serv(Environment *env) {
                                     set_new_game(serv_env);
                                     send(new_sd, NO_TURN, strlen(NO_TURN), 0);
                                 }
-
                             }
                             break;
                         } while (new_sd != -1);
@@ -253,15 +252,10 @@ static int accept_serv(Environment *env) {
                                 if (!recv(i, buffer, sizeof(buffer), 0)) {
                                     printf("A player has quit!\nAwaiting for new player to connect\n");
                                     serv_env->client_num--;
-                                    dc_close(i);
-                                    FD_CLR(i, &(serv_env->readfds));
-                                    if (i == serv_env->max_sd)
-                                    {
-                                        while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
-                                            serv_env->max_sd -= 1;
-                                    }
+                                    close_conn = 1;
+                                    break;
                                 } else {
-                                    for (int z = 0; z < serv_env->client_num / 2; z++) {
+                                    for (int z = 0; z < serv_env->index + 1; z++) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->game_list[z].player[y] == i) {
                                                 serv_env->game_list[z].turn++;
@@ -292,9 +286,10 @@ static int accept_serv(Environment *env) {
                             }
                         }
                         if (close_conn) {
-                            close(i);
+                            dc_close(i);
                             FD_CLR(i, &(serv_env->readfds));
-                            if (i == serv_env->max_sd) {
+                            if (i == serv_env->max_sd)
+                            {
                                 while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
                                     serv_env->max_sd -= 1;
                             }
