@@ -224,7 +224,6 @@ static int accept_serv(Environment *env) {
                             serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
-                            //send(i, GAME_BEGIN, strlen(GAME_BEGIN), 0); // send message to player 1
                             if (new_sd % 2 == 0)
                                 send(new_sd, YES_TURN, strlen(YES_TURN), 0);
                             else {
