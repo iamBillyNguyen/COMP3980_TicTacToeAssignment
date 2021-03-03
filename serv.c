@@ -45,11 +45,11 @@ typedef struct {
 } ServEnvironment;
 
 static int init_server(Environment *env);
-//static int awaiting_new_player(Environment *env);
 static int server_error(Environment *env);
 static int accept_serv(Environment *env);
 static int bind_serv(Environment *env);
 static int listen_serv(Environment *env);
+static int clean_up_serv(Environment *env);
 
 
 /**
@@ -64,6 +64,7 @@ typedef enum
     BIND,                            // 3
     LISTEN,                          // 4
     ACCEPT,                          // 5
+    CLEAN_UP,                        // 6
     ERROR_SERV                       // 7
 } States;
 
@@ -79,6 +80,9 @@ int main()
                     {INIT_SERV,  ERROR_SERV,     &server_error},
                     {BIND,  ERROR_SERV,     &server_error},
                     {ACCEPT,  ERROR_SERV,     &server_error},
+                    {ACCEPT, CLEAN_UP, &clean_up_serv},
+                    {ERROR_SERV, FSM_EXIT, NULL},
+                    {CLEAN_UP, FSM_EXIT, NULL},
                     {FSM_IGNORE, FSM_IGNORE, NULL},
             };
 
@@ -194,7 +198,7 @@ static int accept_serv(Environment *env) {
                             new_sd = dc_accept(serv_env->sfd, NULL, NULL);
                             if (new_sd < 0) {
                                 perror("  accept() failed");
-                                break;
+                                return ERROR_SERV;
                             }
                             printf("  New incoming connection - %d\n", new_sd);
                             FD_SET(new_sd, &(serv_env->readfds));
@@ -204,7 +208,7 @@ static int accept_serv(Environment *env) {
 
                                 if (!tmp || !tmp2) {
                                     perror("realloc\n");
-                                    exit(EXIT_FAILURE);
+                                    return ERROR_SERV;
                                 }
                                 serv_env->game_list = tmp;
                                 serv_env->player_socket = tmp2;
@@ -222,48 +226,27 @@ static int accept_serv(Environment *env) {
                                 send(new_sd, NO_TURN, strlen(NO_TURN), 0);
                                 set_new_game(serv_env);
                             }
-
                             break;
-
                         } while (new_sd != -1);
                     } else {
                         printf("  Descriptor %d is readable\n", i);
                         close_conn = 0;
                         do {
                             if (i > serv_env->sfd) {
-//                                rc = recv(i, buffer, sizeof(buffer), 0);
-//                                if (buffer[0] == EOF || buffer[0] == '\n') {
-//                                    dc_close(i);
-//                                    FD_CLR(i, &(serv_env->readfds));
-//                                    break;
-//                                }
-//                                //game_env->player2_turn = !game_env->player2_turn;
-//                                if (rc < 0) {
-//                                    perror("recv\n");
-//                                    break;
-//                                }
-//                                if (rc == 0) {
-//                                    printf("  Connection closed\n");
-//                                    close_conn = 1;
-//                                    client_num -= 1;
-//                                    break;
-//                                }
-//                                printf("  %d bytes received\n", rc);
-//                                len = rc;
-//                                rc = send(i, buffer, len, 0);
-//                                if (rc < 0) {
-//                                    perror("  send() failed");
-//                                    close_conn = 1;
-//                                    break;
-//                                }
+
+                                // check if the connection has closed or not
+                                // close connection if yes
                                 if (!recv(i, buffer, sizeof(buffer), 0)) {
                                     printf("A player has quit!\nAwaiting for new player to connect\n");
                                     serv_env->client_num--;
                                     dc_close(i);
                                     FD_CLR(i, &(serv_env->readfds));
-                                    //return MIDGAME_QUIT;
+                                    if (i == serv_env->max_sd)
+                                    {
+                                        while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
+                                            serv_env->max_sd -= 1;
+                                    }
                                 } else {
-
                                     for (int z = 0; z < serv_env->client_num / 2; z++) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->game_list[z].player[y] == i) {
@@ -281,51 +264,46 @@ static int accept_serv(Environment *env) {
                                 }
                             }
                         } while (1);
-                            if (close_conn) {
-                                close(i);
-                                FD_CLR(i, &(serv_env->readfds));
-                                if (i == serv_env->max_sd) {
-                                    while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
-                                        serv_env->max_sd -= 1;
+                        for (int z = 0; z < serv_env->client_num / 2; z++) {
+                            if (buffer[0] == 'r') {
+                                printf("replay\n");
+                                if (i % 2 == 0) {
+                                    send(i, YES_TURN, strlen(YES_TURN), 0);
+                                    serv_env->game_list[z].player[0] = i;
+                                } else {
+                                    send(i, NO_TURN, strlen(NO_TURN), 0);
+                                    serv_env->game_list[z].player[1] = i;
+                                    init_game((Environment*)(&serv_env->game_list[z]));
                                 }
+                            }
+                        }
+                        if (close_conn) {
+                            close(i);
+                            FD_CLR(i, &(serv_env->readfds));
+                            if (i == serv_env->max_sd) {
+                                while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
+                                    serv_env->max_sd -= 1;
                             }
                         }
                     }
                 }
             }
-        //}
+        }
+    return CLEAN_UP;
 }
 
+static int clean_up_serv(Environment *env) {
+    ServEnvironment *serv_env;
+    serv_env = (ServEnvironment *)env;
 
-/*static int awaiting_new_player(Environment *env) {
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-    while (game_env->client_num < BACKLOG) {
-        char* mess = MIDGAME_QUIT;
-        dc_listen(game_env->sfd, BACKLOG);
-        game_env->player[game_env->client_num] = dc_accept(game_env->sfd,(struct sockaddr *) &game_env->player_addr[game_env->client_num],
-                                                           &game_env->slen);
-        game_env->client_num++;
-        printf("%d/2 Player has joined\n", game_env->client_num);
-        if (game_env->player2_turn)
-        {
-            game_env->player2_turn = false; // switch to player 1
-            send(game_env->player[0], mess1, strlen(mess1), 0);
-            send(game_env->player[1], mess2, strlen(mess2), 0);
-
-        }
-        else
-        {
-            game_env->player2_turn = true;
-            send(game_env->player[1], mess1, strlen(mess1), 0);
-            send(game_env->player[0], mess2, strlen(mess2), 0);
-
-        }
+    for (int i=0; i <= serv_env->max_sd; ++i)
+    {
+        if (FD_ISSET(i, &(serv_env->readfds)))
+            dc_close(i);
     }
-    return READ;
-}*/
 
-
+    return FSM_EXIT;
+}
 
 static int server_error(Environment *env) {
     ServEnvironment *serv_env;
