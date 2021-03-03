@@ -1,4 +1,4 @@
-# COMP3980_Assignment1_TicTacToe
+# COMP3980_TicTacToeAssignment
 
 By: Iris, Tiffany, Billy
 
