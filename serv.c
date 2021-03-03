@@ -38,7 +38,7 @@
 typedef struct {
     Environment common;
     struct sockaddr_in addr;
-    int sfd, slen, max_sd;
+    int sfd, slen, max_sd, size, index, client_num;
     fd_set readfds, workingfds;
     int player_socket[BACKLOG];
     TTTEnvironment *game_list[BACKLOG];
@@ -64,7 +64,7 @@ typedef enum
     BIND,                            // 3
     LISTEN,                          // 4
     ACCEPT,                          // 5
-    ERROR_SERV                       // 6
+    ERROR_SERV                       // 7
 } States;
 
 
@@ -149,17 +149,34 @@ static int listen_serv(Environment *env) {
     printf("----- BIT SERVER'S TIC TAC TOE GAME -----\n");
     printf("Waiting for Players to join ...\n");
 
+    serv_env->size = 2;
+    serv_env->index = 0;
+    serv_env->client_num = 0;
+
+    return ACCEPT;
+}
+void set_new_game(ServEnvironment *serv_env) {
     TTTEnvironment *game_env;
+
     game_env = dc_malloc(sizeof(TTTEnvironment));
     set_game((Environment*)game_env);
-    serv_env->game_list[0] = game_env;
-    return ACCEPT;
+    serv_env->game_list[serv_env->index] = game_env;
+
+    // Assigning 2 new players to a game
+    if (serv_env->client_num == serv_env->size) {
+        for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
+            serv_env->game_list[serv_env->index]->player[x] = serv_env->player_socket[j];
+        }
+        serv_env->size += NUM_PLAYER_PER_GAME;
+        serv_env->index++;
+    }
 }
 
 static int accept_serv(Environment *env) {
     ServEnvironment *serv_env;
     serv_env = (ServEnvironment *) env;
-    int rc, retval, desc, len, i, new_sd, close_conn, client_num = 0;
+    int rc, retval, desc, len, i, new_sd, close_conn;
+
     char buffer[2];
 
     FD_ZERO(&(serv_env->readfds));
@@ -186,7 +203,7 @@ static int accept_serv(Environment *env) {
         for (i = 0; i <= serv_env->max_sd && desc > 0; ++i) {
             if (FD_ISSET(i, &(serv_env->workingfds))) {
                 desc -= 1;
-                if (client_num <= BACKLOG) {
+                if (serv_env->client_num <= BACKLOG) {
                     if (i == serv_env->sfd) {
                         printf("  Listening socket is readable\n");
                         do {
@@ -197,15 +214,18 @@ static int accept_serv(Environment *env) {
                             }
                             printf("  New incoming connection - %d\n", new_sd);
                             FD_SET(new_sd, &(serv_env->readfds));
-                            serv_env->player_socket[client_num] = new_sd;
-                            client_num++;
+                            serv_env->player_socket[serv_env->client_num] = new_sd;
+                            serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
                             //send(i, GAME_BEGIN, strlen(GAME_BEGIN), 0); // send message to player 1
                             if (new_sd % 2 == 0)
                                 send(new_sd, YES_TURN, strlen(YES_TURN), 0);
-                            else
+                            else {
                                 send(new_sd, NO_TURN, strlen(NO_TURN), 0);
+                                set_new_game(serv_env);
+                            }
+
                             break;
 
                         } while (new_sd != -1);
@@ -241,71 +261,44 @@ static int accept_serv(Environment *env) {
 //                                }
                                 if (!recv(i, buffer, sizeof(buffer), 0)) {
                                     printf("A player has quit!\nAwaiting for new player to connect\n");
-                                    client_num--;
+                                    serv_env->client_num--;
+                                    dc_close(i);
+                                    FD_CLR(i, &(serv_env->readfds));
                                     //return MIDGAME_QUIT;
                                 } else {
-                                    serv_env->game_list[0]->turn++;
-                                    serv_env->game_list[0]->c = buffer[0];
-                                    printf("Player %d wrote: %c\n", (i - serv_env->sfd), serv_env->game_list[0]->c);
-                                    serv_env->game_list[0]->c = buffer[0];
-//                                    send(i, NO_TURN, strlen(NO_TURN), 0);
-//                                    send(i+1, YES_TURN, strlen(YES_TURN), 0);
-                                }
 
-                                if (client_num > 1) {
-                                    for (int j = 0; j < 2; j++) {
-                                        serv_env->game_list[0]->player[j] = serv_env->player_socket[j];
+                                    for (int z = 0; z < serv_env->client_num / 2; z++) {
+                                        for (int y = 0; y < 2; y++) {
+                                            if (serv_env->game_list[z]->player[y] == i) {
+                                                serv_env->game_list[z]->turn++;
+                                                serv_env->game_list[z]->c = buffer[0];
+                                                printf("Player %d wrote: %c\n", (i - serv_env->sfd),
+                                                       serv_env->game_list[z]->c);
+                                                serv_env->game_list[z]->c = buffer[0];
+                                                handle_move(serv_env->game_list[z]);
+                                                break;
+                                            }
+                                        }
                                     }
-                                    handle_move(serv_env->game_list[0]);
+                                    break;
                                 }
-                                break;
                             }
                         } while (1);
-                        // Assigning every 2 player to a TTT game
-//                        int fd = serv_env->sfd + 1;
-//                        for (i = 0; i < client_num / 2; i++) {
-//                            TTTEnvironment *game_env;
-//                            game_env = dc_malloc(sizeof(TTTEnvironment));
-//                            for (int j = 0; j < 2; j++) {
-//                                game_env->player[j] = serv_env->player_socket[i];
-//                                fd++;
-//                            }
-//                            serv_env->game_list[i] = game_env;
-//                        }
-
-                        if (close_conn) {
-                            close(i);
-                            FD_CLR(i, &(serv_env->readfds));
-                            if (i == serv_env->max_sd) {
-                                while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
-                                    serv_env->max_sd -= 1;
+                            if (close_conn) {
+                                close(i);
+                                FD_CLR(i, &(serv_env->readfds));
+                                if (i == serv_env->max_sd) {
+                                    while (FD_ISSET(serv_env->max_sd, &(serv_env->readfds)) == 0)
+                                        serv_env->max_sd -= 1;
+                                }
                             }
                         }
                     }
                 }
-//            if (FD_ISSET(game_env->sfd, &readfds)) {
-//                if (game_env->player[i] == 0) {
-//                    game_env->player[i] = dc_accept(game_env->sfd,
-//                                                    (struct sockaddr *) &game_env->player_addr[game_env->client_num],
-//                                                    &game_env->slen);
-//                    FD_SET(game_env->player[i], &readfds); // Adding players to socket
-//                    send(game_env->player[game_env->player2_turn], mess1, strlen(mess1), 0);
-//                    send(game_env->player[1], mess2, strlen(mess2), 0);
-//                    break;
-//                }
-//            }
-
             }
         }
-    }
 }
 
-//static int handle_move(Environment *env) {
-//    TTTEnvironment *game_env;
-//    game_env = (TTTEnvironment *)env;
-//
-//
-//}
 
 /*static int awaiting_new_player(Environment *env) {
     TTTEnvironment *game_env;

@@ -213,7 +213,6 @@ static int error(Environment *env)
     game_env = (TTTEnvironment *)env;
 
     printf("Invalid move player %d, place again!\n", game_env->player2_turn ? 2 : 1);
-    game_env->player2_turn = !game_env->player2_turn; // Negate back to original state
     send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
     send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
 
