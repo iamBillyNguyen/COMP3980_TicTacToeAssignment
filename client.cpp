@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
                 count++; // TO KEEP TRACK OF 'X' & 'O'
                 break;
             case '7':
-                std::cout << "----- GAME BEGINS -----" << endl;
+                count++;
                 break;
             default:
                 break;

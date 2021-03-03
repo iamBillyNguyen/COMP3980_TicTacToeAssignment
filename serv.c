@@ -148,13 +148,8 @@ static int listen_serv(Environment *env) {
 
     return ACCEPT;
 }
-void set_new_game(ServEnvironment *serv_env) {
-    TTTEnvironment *game_env;
 
-    game_env = dc_malloc(sizeof(TTTEnvironment));
-    init_game((Environment*)game_env);
-    serv_env->game_list[serv_env->index] = *game_env;
-
+void assign_player(ServEnvironment *serv_env) {
     // Assigning 2 new players to a game
     if (serv_env->client_num == serv_env->size) {
         for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
@@ -163,6 +158,16 @@ void set_new_game(ServEnvironment *serv_env) {
         serv_env->size += NUM_PLAYER_PER_GAME;
         serv_env->index++;
     }
+}
+
+void set_new_game(ServEnvironment *serv_env) {
+    TTTEnvironment *game_env;
+
+    game_env = dc_malloc(sizeof(TTTEnvironment));
+    init_game((Environment*)game_env);
+    serv_env->game_list[serv_env->index] = *game_env;
+
+    assign_player(serv_env);
 }
 
 static int accept_serv(Environment *env) {
@@ -223,8 +228,17 @@ static int accept_serv(Environment *env) {
                             if (new_sd % 2 == 0)
                                 send(new_sd, YES_TURN, strlen(YES_TURN), 0);
                             else {
-                                send(new_sd, NO_TURN, strlen(NO_TURN), 0);
-                                set_new_game(serv_env);
+                                if (serv_env->game_list[serv_env->index - 1].player2_turn) {
+                                    for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
+                                        serv_env->game_list[serv_env->index - 1].player[x] = serv_env->player_socket[j];
+                                    }
+                                    send(new_sd, O, strlen(O), 0);
+                                    send(new_sd, YES_TURN, strlen(YES_TURN), 0);
+                                } else {
+                                    set_new_game(serv_env);
+                                    send(new_sd, NO_TURN, strlen(NO_TURN), 0);
+                                }
+
                             }
                             break;
                         } while (new_sd != -1);
