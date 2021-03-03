@@ -16,6 +16,5 @@
 #define TIE "4"
 #define YES_TURN "5"
 #define NO_TURN "6"
-#define REPLAY "7"
 
 #endif
