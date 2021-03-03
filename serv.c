@@ -32,16 +32,16 @@
 #include "shared.h"
 #include "TTTGame.c"
 
-#define BACKLOG 4
-
+#define BACKLOG 2
+#define N 10
 
 typedef struct {
     Environment common;
     struct sockaddr_in addr;
-    int sfd, slen, max_sd, size, index, client_num;
+    int sfd, slen, max_sd, size, index, client_num, len;
     fd_set readfds, workingfds;
-    int player_socket[BACKLOG];
-    TTTEnvironment *game_list[BACKLOG];
+    int *player_socket;
+    TTTEnvironment *game_list;
 } ServEnvironment;
 
 static int init_server(Environment *env);
@@ -66,10 +66,6 @@ typedef enum
     ACCEPT,                          // 5
     ERROR_SERV                       // 7
 } States;
-
-
-char *mess1 = YES_TURN;
-char *mess2 = NO_TURN;
 
 int main()
 {
@@ -101,6 +97,8 @@ int main()
 
         return EXIT_FAILURE;
     }
+    free(env.player_socket);
+    free(env.game_list);
     return EXIT_SUCCESS;
 }
 
@@ -108,23 +106,18 @@ static int init_server(Environment *env) {
     ServEnvironment *serv_env;
     serv_env = (ServEnvironment *) env;
 
-//    rc = ioctl(game_env->sfd, FIONBIO, (char *) &enable);
-//    if (rc < 0) {
-//        perror("ioctl() failed");
-//        close(game_env->sfd);
-//        exit(-1);
-//    }
-
     serv_env->slen = sizeof(struct sockaddr_in);
     memset(&serv_env->addr, 0, sizeof(serv_env->slen));
     serv_env->addr.sin_family = AF_INET;
     serv_env->addr.sin_port = htons(PORT);
     serv_env->addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    for (int i = 0; i < BACKLOG; i++) {
-        serv_env->player_socket[i] = 0;
-    }
-
+    serv_env->size = 2;
+    serv_env->index = 0;
+    serv_env->client_num = 0;
+    serv_env->game_list = (TTTEnvironment *)dc_malloc(sizeof(TTTEnvironment));
+    serv_env->player_socket = (int *)dc_malloc(2 * sizeof(int));
+    printf("%d\n", serv_env->player_socket[1]);
     return BIND;
 }
 
@@ -145,13 +138,9 @@ static int listen_serv(Environment *env) {
     ServEnvironment *serv_env;
     serv_env = (ServEnvironment *) env;
 
-    dc_listen(serv_env->sfd, BACKLOG);
+    dc_listen(serv_env->sfd, N);
     printf("----- BIT SERVER'S TIC TAC TOE GAME -----\n");
     printf("Waiting for Players to join ...\n");
-
-    serv_env->size = 2;
-    serv_env->index = 0;
-    serv_env->client_num = 0;
 
     return ACCEPT;
 }
@@ -159,13 +148,13 @@ void set_new_game(ServEnvironment *serv_env) {
     TTTEnvironment *game_env;
 
     game_env = dc_malloc(sizeof(TTTEnvironment));
-    set_game((Environment*)game_env);
-    serv_env->game_list[serv_env->index] = game_env;
+    init_game((Environment*)game_env);
+    serv_env->game_list[serv_env->index] = *game_env;
 
     // Assigning 2 new players to a game
     if (serv_env->client_num == serv_env->size) {
         for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
-            serv_env->game_list[serv_env->index]->player[x] = serv_env->player_socket[j];
+            serv_env->game_list[serv_env->index].player[x] = serv_env->player_socket[j];
         }
         serv_env->size += NUM_PLAYER_PER_GAME;
         serv_env->index++;
@@ -185,11 +174,6 @@ static int accept_serv(Environment *env) {
 
     while (1) {
         memcpy(&(serv_env->workingfds), &(serv_env->readfds), sizeof(serv_env->readfds));
-        // Adding child socket to set
-//        if (game_env->client_num == BACKLOG) {
-//            send(game_env->player[game_env->player2_turn], mess1, strlen(mess1), 0);
-//            send(game_env->player[!game_env->player2_turn], mess2, strlen(mess2), 0);
-//        }
         retval = select(serv_env->max_sd + 1, &(serv_env->workingfds), NULL, NULL, NULL);
         if (retval < 0) {
             perror("select");
@@ -203,7 +187,7 @@ static int accept_serv(Environment *env) {
         for (i = 0; i <= serv_env->max_sd && desc > 0; ++i) {
             if (FD_ISSET(i, &(serv_env->workingfds))) {
                 desc -= 1;
-                if (serv_env->client_num <= BACKLOG) {
+                //if (serv_env->client_num <= BACKLOG) {
                     if (i == serv_env->sfd) {
                         printf("  Listening socket is readable\n");
                         do {
@@ -214,7 +198,20 @@ static int accept_serv(Environment *env) {
                             }
                             printf("  New incoming connection - %d\n", new_sd);
                             FD_SET(new_sd, &(serv_env->readfds));
+                            if (serv_env->client_num + 1 == NUM_PLAYER_PER_GAME) {
+                                TTTEnvironment *tmp = (TTTEnvironment *)realloc(serv_env->game_list, NUM_PLAYER_PER_GAME * sizeof(TTTEnvironment));
+                                int *tmp2 = (int *)realloc(serv_env->player_socket, sizeof(int));
+
+                                if (!tmp || !tmp2) {
+                                    perror("realloc\n");
+                                    exit(EXIT_FAILURE);
+                                }
+                                serv_env->game_list = tmp;
+                                serv_env->player_socket = tmp2;
+                            }
+
                             serv_env->player_socket[serv_env->client_num] = new_sd;
+                            printf("second index fd %d\n", serv_env->player_socket[serv_env->client_num]);
                             serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
@@ -269,13 +266,13 @@ static int accept_serv(Environment *env) {
 
                                     for (int z = 0; z < serv_env->client_num / 2; z++) {
                                         for (int y = 0; y < 2; y++) {
-                                            if (serv_env->game_list[z]->player[y] == i) {
-                                                serv_env->game_list[z]->turn++;
-                                                serv_env->game_list[z]->c = buffer[0];
+                                            if (serv_env->game_list[z].player[y] == i) {
+                                                serv_env->game_list[z].turn++;
+                                                serv_env->game_list[z].c = buffer[0];
                                                 printf("Player %d wrote: %c\n", (i - serv_env->sfd),
-                                                       serv_env->game_list[z]->c);
-                                                serv_env->game_list[z]->c = buffer[0];
-                                                handle_move(serv_env->game_list[z]);
+                                                       serv_env->game_list[z].c);
+                                                serv_env->game_list[z].c = buffer[0];
+                                                handle_move(&(serv_env->game_list[z]));
                                                 break;
                                             }
                                         }
@@ -296,7 +293,7 @@ static int accept_serv(Environment *env) {
                     }
                 }
             }
-        }
+        //}
 }
 
 

@@ -44,7 +44,7 @@ bool handle_move(TTTEnvironment *env) {
     return EXIT_SUCCESS;
 }
 
-void set_game(Environment *env) {
+void init_game(Environment *env) {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
 

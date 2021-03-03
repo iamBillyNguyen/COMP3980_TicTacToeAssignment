@@ -23,6 +23,6 @@ static void update_board(char c, char playBoard[][3], char player, Environment *
 char check(char playBoard[][3]);
 static void check_user_choice(Environment *env);
 bool handle_move(TTTEnvironment *env);
-void set_game(Environment *env);
+void init_game(Environment *env);
 
 #endif // TTTGAME_H
