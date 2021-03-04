@@ -1,9 +1,9 @@
-# COMP3980_Assignment1_TicTacToe
+# COMP3980 Assignment2 TicTacToe (Second Version of TTT Game)
 
 By: Iris Law, Tiffany Gu, Billy Nguyen
 
 ## 1. Installing dcfsm Library
-Please install dcfsm library from D'Arcy's dcfsm repo https://github.com/darcy-bcit/dcfsm/blob/main/demo/demo.c
+Please install dcfsm library from D'Arcy's dcfsm repo https://github.com/darcy-bcit/dcfsm/blob/main/demo/demo.c.
 
 Use the following commands to install onto the machine (if has not done yet):
 ```
@@ -33,3 +33,7 @@ Then, type ```./client``` to run the client. It will be connected to the remote 
 The server is written in C and is compatible with Linux system. The client is written in C++ and is compatible with Linux system, too.  
 The IP address of the server and the clients is hardcoded. To test connection, you can type
 ```telnet <IP address> <port>``` to check if the remote server is available.
+This design uses dynamic memory to store multiple games.  
+
+## 5. Some functions not supported
+If a player leaves the game in the middle of playing, then another player connects, the latter player will be connected to the game in the middle of playing. We currently do not support the function to start a new game if a previous player has left a game.
