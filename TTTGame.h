@@ -10,7 +10,7 @@ typedef struct
 {
     Environment common;
     char c, player_c;
-    bool player2_turn;
+    bool player2_turn, started;
     int player[NUM_PLAYER_PER_GAME];
     int client_num, turn;
     char playBoard[3][3];

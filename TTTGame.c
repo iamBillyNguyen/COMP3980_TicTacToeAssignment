@@ -51,6 +51,7 @@ void init_game(Environment *env) {
     game_env->client_num = 2;
     game_env->turn = 0;
     game_env->player2_turn = false;
+    game_env->started = false;
     game_env->player_c = 'X';
 
     for (int i = 0; i < 3; i++) {

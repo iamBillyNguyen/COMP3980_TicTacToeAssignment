@@ -24,7 +24,7 @@ shared.h
 dcfsm/fsm.h
 -
 
-/home/billy/CLionProjects/COMP3980_Assignment1/serv.c
+/home/billy/CLionProjects/COMP3980_Assignment1/server.c
 stdio.h
 -
 stdlib.h

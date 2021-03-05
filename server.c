@@ -155,8 +155,7 @@ void assign_player(ServEnvironment *serv_env) {
         for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
             serv_env->game_list[serv_env->index].player[x] = serv_env->player_socket[j];
         }
-        serv_env->size += NUM_PLAYER_PER_GAME;
-        serv_env->index++;
+        serv_env->game_list[serv_env->index].started = true;
     }
 }
 
@@ -168,6 +167,12 @@ void set_new_game(ServEnvironment *serv_env) {
     serv_env->game_list[serv_env->index] = *game_env;
 
     assign_player(serv_env);
+
+    send(serv_env->game_list[serv_env->index].player[0], YES_TURN, strlen(YES_TURN), 0);
+    send(serv_env->game_list[serv_env->index].player[1], NO_TURN, strlen(NO_TURN), 0);
+
+    serv_env->size += NUM_PLAYER_PER_GAME;
+    serv_env->index++;
 }
 
 static int accept_serv(Environment *env) {
@@ -223,18 +228,24 @@ static int accept_serv(Environment *env) {
                             serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
-                            if (new_sd % 2 == 0)
-                                send(new_sd, YES_TURN, strlen(YES_TURN), 0);
-                            else {
-                                if (serv_env->game_list[serv_env->index - 1].player2_turn) {
+                            int a = (serv_env->client_num - 1) / 2;
+                            printf("a %d\n", a);
+                            printf("client_num %d\n", serv_env->client_num);
+                            if (new_sd % 2 == 0) {
+                                if (serv_env->game_list[a].started) { // midgame quit
+                                    send(new_sd, YES_TURN, strlen(YES_TURN), 0);
+                                } else {
+                                    send(new_sd, WAIT, strlen(WAIT), 0);
+                                }
+                            } else {
+                                if (serv_env->game_list[a].player2_turn) { // midgame quit
                                     for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
-                                        serv_env->game_list[serv_env->index - 1].player[x] = serv_env->player_socket[j];
+                                        serv_env->game_list[a].player[x] = serv_env->player_socket[j];
                                     }
                                     send(new_sd, O, strlen(O), 0);
                                     send(new_sd, YES_TURN, strlen(YES_TURN), 0);
                                 } else {
                                     set_new_game(serv_env);
-                                    send(new_sd, NO_TURN, strlen(NO_TURN), 0);
                                 }
                             }
                             break;
