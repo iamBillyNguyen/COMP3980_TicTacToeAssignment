@@ -100,7 +100,6 @@ int main(int argc, char *argv[])
 
         // either response code or position
         recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
-        puts(server_buffer);
         switch (server_buffer[0])
         {
             case '0':
