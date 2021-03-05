@@ -151,11 +151,13 @@ static int listen_serv(Environment *env) {
 
 void assign_player(ServEnvironment *serv_env) {
     // Assigning 2 new players to a game
+    int a = (serv_env->player_socket[serv_env->client_num - 2] - serv_env->sfd - 1) / 2;
+
     if (serv_env->client_num == serv_env->size) {
         for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
-            serv_env->game_list[serv_env->index].player[x] = serv_env->player_socket[j];
+            serv_env->game_list[a].player[x] = serv_env->player_socket[j];
         }
-        serv_env->game_list[serv_env->index].started = true;
+        serv_env->game_list[a].started = true;
     }
 }
 
@@ -228,20 +230,17 @@ static int accept_serv(Environment *env) {
                             serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
-                            int a = (serv_env->client_num - 1) / 2;
-                            printf("a %d\n", a);
-                            printf("client_num %d\n", serv_env->client_num);
+                            int a = (new_sd - serv_env->sfd - 1) / 2;
                             if (new_sd % 2 == 0) {
                                 if (serv_env->game_list[a].started) { // midgame quit
                                     send(new_sd, YES_TURN, strlen(YES_TURN), 0);
+                                    assign_player(serv_env);
                                 } else {
                                     send(new_sd, WAIT, strlen(WAIT), 0);
                                 }
                             } else {
                                 if (serv_env->game_list[a].player2_turn) { // midgame quit
-                                    for (int j = (serv_env->client_num - 2), x = 0; j < serv_env->client_num, x < 2; j++, x++) {
-                                        serv_env->game_list[a].player[x] = serv_env->player_socket[j];
-                                    }
+                                    assign_player(serv_env);
                                     send(new_sd, O, strlen(O), 0);
                                     send(new_sd, YES_TURN, strlen(YES_TURN), 0);
                                 } else {
