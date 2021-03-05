@@ -220,7 +220,6 @@ static int accept_serv(Environment *env) {
                             }
 
                             serv_env->player_socket[serv_env->client_num] = new_sd;
-                            printf("second index fd %d\n", serv_env->player_socket[serv_env->client_num]);
                             serv_env->client_num++;
                             if (new_sd > serv_env->max_sd)
                                 serv_env->max_sd = new_sd;
