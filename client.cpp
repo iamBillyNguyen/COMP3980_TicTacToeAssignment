@@ -114,6 +114,10 @@ int main(int argc, char *argv[])
 
             send(sockfd, req, sizeof(req), 0);
             recv(sockfd, res, sizeof(res), 0);
+            printf("Your uid: ");
+            for (int i = 3; i < 7; i++) {
+                printf("%x", res[i]);
+            }
             connected = true;
         } else {
             recv(sockfd, res, sizeof(res), 0);

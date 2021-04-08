@@ -55,7 +55,6 @@ static int bind_serv(Environment *env);
 static int listen_serv(Environment *env);
 static int clean_up_serv(Environment *env);
 
-
 /**
  * NOTE:
  * - Server is not able to update current board to newly joined player... they can only
@@ -257,9 +256,16 @@ static int accept_serv(Environment *env) {
                                     printf("TIC_TAC_TOE\n");
                                     serv_env->res[MSG_TYPE] = SUCCESS;
                                     serv_env->res[CONTEXT] = CONFIRMATION;
-                                    serv_env->res[PAYLOAD] = new_sd;
-                                    serv_env->res[PAYLOAD_LEN] = sizeof(new_sd);
+
+                                    uint8_t* uid = convert_uid_to_4_bytes(new_sd);
+                                    size_t index = PAYLOAD;
+                                    for (int x = 0; x < 4; x++) {
+                                        serv_env->res[index] = uid[x];
+                                        index++;
+                                    }
+                                    serv_env->res[PAYLOAD_LEN] = 4;
                                     send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
+                                    uint8_t val = convert_uid_to_1byte(uid);
                                     // TODO: Do something;
                                     break;
                                 case ROCK_PAPER_SCISSOR:
