@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include "TTTGame.h"
 #include "shared.h"
@@ -19,10 +20,6 @@ bool handle_move(TTTEnvironment *env) {
                     {VALIDATE, ERROR, &error},
                     {VALIDATE, FSM_EXIT, NULL},
                     {ERROR, FSM_EXIT, NULL},
-                    //{VALIDATE, INIT_SERV, &init_server},
-                    //{VALIDATE, MIDGAME_QUIT, &awaiting_new_player},
-                    //{READ, MIDGAME_QUIT, &awaiting_new_player},
-                    //{MIDGAME_QUIT, READ, &read_input},
                     {FSM_IGNORE, FSM_IGNORE, NULL}
             };
 
@@ -126,14 +123,14 @@ static int validate(Environment *env)
 
     char key = check(game_env->playBoard);
     if (key == 'X') {
-        send(game_env->player[1], LOSE, strlen(LOSE), 0);
+        send(game_env->player[1], LOSS, strlen(LOSS), 0);
         send(game_env->player[0], WIN, strlen(WIN), 0);
         printf("----- Player 1 won! -----\n");
         check_user_choice(env);
         return FSM_EXIT;
     } else if (key == 'O') {
         send(game_env->player[1], WIN, strlen(WIN), 0);
-        send(game_env->player[0], LOSE, strlen(LOSE), 0);
+        send(game_env->player[0], LOSS, strlen(LOSS), 0);
         printf("----- Player 2 won! -----\n");
         check_user_choice(env);
         return FSM_EXIT;
@@ -149,17 +146,17 @@ static int validate(Environment *env)
     }
 
     // SWITCH TURN AFTER DONE VALIDATION
-    if (game_env->player2_turn)
-    {
-        send(game_env->player[0], YES_TURN, strlen(YES_TURN), 0);
-        send(game_env->player[1], NO_TURN, strlen(NO_TURN), 0);
-    }
-    else
-    {
-        send(game_env->player[1], YES_TURN, strlen(YES_TURN), 0);
-        send(game_env->player[0], NO_TURN, strlen(NO_TURN), 0);
-
-    }
+//    if (game_env->player2_turn)
+//    {
+//        send(game_env->player[0], YES_TURN, strlen(YES_TURN), 0);
+//        send(game_env->player[1], NO_TURN, strlen(NO_TURN), 0);
+//    }
+//    else
+//    {
+//        send(game_env->player[1], YES_TURN, strlen(YES_TURN), 0);
+//        send(game_env->player[0], NO_TURN, strlen(NO_TURN), 0);
+//
+//    }
     game_env->player2_turn = !game_env->player2_turn;
     return FSM_EXIT;
 }
@@ -214,8 +211,8 @@ static int error(Environment *env)
     game_env = (TTTEnvironment *)env;
 
     printf("Invalid move player %d, place again!\n", game_env->player2_turn ? 2 : 1);
-    send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
-    send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
+//    send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
+//    send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
 
     return FSM_EXIT;
 }

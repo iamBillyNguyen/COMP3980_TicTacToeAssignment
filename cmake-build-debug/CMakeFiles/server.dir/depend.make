@@ -3,6 +3,8 @@
 
 CMakeFiles/server.dir/server.c.o: ../TTTGame.c
 CMakeFiles/server.dir/server.c.o: ../TTTGame.h
+CMakeFiles/server.dir/server.c.o: ../modules/utils.c
+CMakeFiles/server.dir/server.c.o: ../modules/utils.h
 CMakeFiles/server.dir/server.c.o: ../server.c
 CMakeFiles/server.dir/server.c.o: ../shared.h
 

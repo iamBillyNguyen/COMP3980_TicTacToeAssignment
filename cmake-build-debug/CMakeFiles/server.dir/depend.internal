@@ -4,5 +4,7 @@
 CMakeFiles/server.dir/server.c.o
  /home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.c
  /home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.h
+ /home/billy/CLionProjects/COMP3980_Assignment1/modules/utils.c
+ /home/billy/CLionProjects/COMP3980_Assignment1/modules/utils.h
  /home/billy/CLionProjects/COMP3980_Assignment1/server.c
  /home/billy/CLionProjects/COMP3980_Assignment1/shared.h
