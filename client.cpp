@@ -69,7 +69,8 @@ int main(int argc, char *argv[])
     char x[1];
     int count = 0;
     uint8_t buffer[7];
-    char server_buffer[7];
+    uint8_t server_buffer[7];
+    bool connected = false;
     char playBoard[3][3] = {{'A','B','C'},
                             {'D','E','F'},
                             {'G','H','I'}};
@@ -94,103 +95,119 @@ int main(int argc, char *argv[])
     }
 
     display();
-    while (1)
-    {
+    while (1) {
         memset(&buffer, 0, sizeof(buffer));
         memset(&server_buffer, 0, sizeof(server_buffer));
 
-        // response from server
-        recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
-        for (int i = 0; i < 7; i++){
-            cout << "server buffer" << endl;
-            cout << server_buffer[0] << endl;
+        uint8_t *req;
+        req = (uint8_t *) calloc(4, sizeof(uint8_t));
+        uint8_t *res;
+        res = (uint8_t *) calloc(4, sizeof(uint8_t));
+        if (!connected) {
+            req[0] = 1;
+            req[1] = 1;
+            req[2] = 1;
+            req[3] = 1;
+            req[4] = TIC_TAC_TOE;
+            // response from server
+//        recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
+
+            send(sockfd, req, sizeof(req), 0);
+            recv(sockfd, res, sizeof(res), 0);
+            connected = true;
+        } else {
+            recv(sockfd, res, sizeof(res), 0);
+//        for (int i = 0; i < 7; i++){
+//            printf("%d", server_buffer[i]);
+//        }
+//        cout << "len " << sizeof(server_buffer) << endl;
+            // switch (server_buffer[0])
+            // {
+            //     case '0':
+            //         printf("Invalid move! Re-enter: ");
+            //         cin >> buffer;
+            //         std::cout << "sent " << buffer << " to server!" << endl;
+            //         bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
+
+            //         if (bytes_sent == -1)
+            //         {
+            //             perror("Bytes could not be sent!");
+            //             return 1;
+            //         }
+            //         break;
+            //     case '1':
+            //         break;
+            //     case '2':
+            //         printf("----- YOU WON! -----\n");
+            //         printf("Type q to quit\nOR\nType r to replay\n>> ");
+            //         cin >> x;
+            //         check_opt(x[0], playBoard);
+            //         bytes_sent = send(sockfd, &x, sizeof(x), 0);
+
+            //         if (bytes_sent == -1)
+            //         {
+            //             perror("Bytes could not be sent!");
+            //             return 1;
+            //         }
+            //         count = 0;
+            //         break;
+            //     case '3':
+            //         printf("----- YOU LOST! -----\n");
+            //         printf("Type q to quit\nOR\nType r to replay\n>> ");
+            //         cin >> x;
+            //         check_opt(x[0], playBoard);
+            //         bytes_sent = send(sockfd, &x, sizeof(x), 0);
+
+            //         if (bytes_sent == -1)
+            //         {
+            //             perror("Bytes could not be sent!");
+            //             return 1;
+            //         }
+            //         count = 0;
+            //         break;
+            //     case '4':
+            //         printf("----- TIE -----\n");
+            //         printf("Type q to quit\nOR\nType r to replay\n>> ");
+            //         cin >> x;
+            //         check_opt(x[0], playBoard);
+            //         count = 0;
+            //         break;
+            //     case '5':
+            //         printf("Your turn, place your move: ");
+            //         cin >> buffer;
+
+            //         std::cout << "sent " << buffer << " to server!" << endl;
+            //         bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
+
+            //         if (bytes_sent == -1)
+            //         {
+            //             perror("Bytes could not be sent!");
+            //             return 1;
+            //         }
+            //         count++; // TO KEEP TRACK OF 'X' & 'O'
+            //         break;
+            //     case '6':
+            //         printf("Please wait for your turn\n");
+            //         count++; // TO KEEP TRACK OF 'X' & 'O'
+            //         break;
+            //     case '7':
+            //         count++;
+            //         break;
+            //     default:
+            //         break;
+            // }
+            // /** UPDATE BOARD */
+            // if (server_buffer[0] >= 'A' && server_buffer[0] <= 'I') {
+            //         char sym = (count % 2 != 0) ? 'X' : 'O';
+            //         update_board(server_buffer[0], playBoard, sym);
+            // }
         }
-        cout << "len " << sizeof(server_buffer) << endl;
-        // switch (server_buffer[0])
-        // {
-        //     case '0':
-        //         printf("Invalid move! Re-enter: ");
-        //         cin >> buffer;
-        //         std::cout << "sent " << buffer << " to server!" << endl;
-        //         bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
-
-        //         if (bytes_sent == -1)
-        //         {
-        //             perror("Bytes could not be sent!");
-        //             return 1;
-        //         }
-        //         break;
-        //     case '1':
-        //         break;
-        //     case '2':
-        //         printf("----- YOU WON! -----\n");
-        //         printf("Type q to quit\nOR\nType r to replay\n>> ");
-        //         cin >> x;
-        //         check_opt(x[0], playBoard);
-        //         bytes_sent = send(sockfd, &x, sizeof(x), 0);
-
-        //         if (bytes_sent == -1)
-        //         {
-        //             perror("Bytes could not be sent!");
-        //             return 1;
-        //         }
-        //         count = 0;
-        //         break;
-        //     case '3':
-        //         printf("----- YOU LOST! -----\n");
-        //         printf("Type q to quit\nOR\nType r to replay\n>> ");
-        //         cin >> x;
-        //         check_opt(x[0], playBoard);
-        //         bytes_sent = send(sockfd, &x, sizeof(x), 0);
-
-        //         if (bytes_sent == -1)
-        //         {
-        //             perror("Bytes could not be sent!");
-        //             return 1;
-        //         }
-        //         count = 0;
-        //         break;
-        //     case '4':
-        //         printf("----- TIE -----\n");
-        //         printf("Type q to quit\nOR\nType r to replay\n>> ");
-        //         cin >> x;
-        //         check_opt(x[0], playBoard);
-        //         count = 0;
-        //         break;
-        //     case '5':
-        //         printf("Your turn, place your move: ");
-        //         cin >> buffer;
-
-        //         std::cout << "sent " << buffer << " to server!" << endl;
-        //         bytes_sent = send(sockfd, &buffer, sizeof(buffer), 0);
-
-        //         if (bytes_sent == -1)
-        //         {
-        //             perror("Bytes could not be sent!");
-        //             return 1;
-        //         }
-        //         count++; // TO KEEP TRACK OF 'X' & 'O'
-        //         break;
-        //     case '6':
-        //         printf("Please wait for your turn\n");
-        //         count++; // TO KEEP TRACK OF 'X' & 'O'
-        //         break;
-        //     case '7':
-        //         count++;
-        //         break;
-        //     default:
-        //         break;
-        // }
-        // /** UPDATE BOARD */
-        // if (server_buffer[0] >= 'A' && server_buffer[0] <= 'I') {
-        //         char sym = (count % 2 != 0) ? 'X' : 'O';
-        //         update_board(server_buffer[0], playBoard, sym);
-        // }
+        free(req);
+        free(res);
         fflush(STDIN_FILENO);
     }
-
     std::cout << endl
-         << "Thank You for playing Tic-tac-Toe" << endl;
+              << "Thank You for playing Tic-tac-Toe" << endl;
     close(sockfd);
     return 0;
 }
