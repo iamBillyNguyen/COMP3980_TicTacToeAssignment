@@ -9,18 +9,19 @@
 typedef struct
 {
     Environment common;
-    char c, player_c;
-    bool player2_turn, started;
+    uint8_t c, player_c;
+    bool player2_turn, done;
     int player[NUM_PLAYER_PER_GAME];
     int client_num, turn;
-    char playBoard[3][3];
-    bool occupy[3][3];
+    char playBoard[9];
+    bool occupy[9];
+    uint8_t* res;
 } TTTEnvironment;
 
 static int validate(Environment *game_env);
 static int error(Environment *env);
-static void update_board(char c, char playBoard[][3], char player, Environment *env);
-char check(char playBoard[][3]);
+static void update_board(uint8_t c, char playBoard[9], char player, Environment *env);
+char check(char playBoard[9]);
 static void check_user_choice(Environment *env);
 bool handle_move(TTTEnvironment *env);
 void init_game(Environment *env);

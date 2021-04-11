@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "tictac.h"
-#include "shared.h"
+#include "./shared.h"
 
 // #define SERV_HOST_ADDR "23.16.22.78"
 #define SERV_HOST_ADDR "127.0.0.1"
@@ -28,18 +28,18 @@ void reset_board(char b[][3]) {
     for (int  i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (i == 0){
-                b[i][j] = 'A' + j;
+                b[i][j] = 0 + j;
             } else if (i == 1) {
-                b[i][j] = 'D' + j;
+                b[i][j] = 3 + j;
             } else {
-                b[i][j] = 'G' + j;
+                b[i][j] = 6 + j;
             }
         }
     }
 }
 
-void check_opt(char choice, char b[][3]) {
-    while (1) {
+void check_opt(uint8_t choice, char b[][3]) {
+    while (true) {
         if (choice == 'q') {
             exit(EXIT_SUCCESS);
         } else if (choice == 'r') {
@@ -66,14 +66,20 @@ int main(int argc, char *argv[])
 {
     int sockfd,  n, connectfd, bytes_sent;
     struct sockaddr_in serv_addr;
-    char x[1];
     int count = 0;
-    uint8_t buffer[7];
-    uint8_t server_buffer[7];
-    bool connected = false;
-    char playBoard[3][3] = {{'A','B','C'},
-                            {'D','E','F'},
-                            {'G','H','I'}};
+    bool connected = false, close_conn = false;
+    auto *uid = (uint8_t*) calloc(4, sizeof(uint8_t));
+    char playBoard[9];
+    char this_player, other_player;
+
+    for (int i = 0; i < 9; i++)
+        playBoard[i] = ' ';
+
+    uint8_t *req;
+    req = (uint8_t *) malloc(4 * sizeof(uint8_t));
+    uint8_t *res;
+    res = (uint8_t *) malloc(4 * sizeof(uint8_t));
+    uint8_t choice[2];
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
@@ -93,16 +99,12 @@ int main(int argc, char *argv[])
         perror("Sorry. Could not connect to server.");
         return 1;
     }
-
+    std::cout<<"\nWelcome to the Tic-Tac-Toe Game!";
     display();
-    while (1) {
-        memset(&buffer, 0, sizeof(buffer));
-        memset(&server_buffer, 0, sizeof(server_buffer));
+    while (!close_conn) {
+        memset(req, 0, sizeof(req));
+        memset(res, 0, sizeof(res));
 
-        uint8_t *req;
-        req = (uint8_t *) calloc(4, sizeof(uint8_t));
-        uint8_t *res;
-        res = (uint8_t *) calloc(4, sizeof(uint8_t));
         if (!connected) {
             req[0] = 1;
             req[1] = 1;
@@ -118,9 +120,94 @@ int main(int argc, char *argv[])
             for (int i = 3; i < 7; i++) {
                 printf("%x", res[i]);
             }
+            cout << endl;
             connected = true;
         } else {
             recv(sockfd, res, sizeof(res), 0);
+            memset(choice, 0, sizeof(choice));
+            switch (res[MSG_TYPE]) {
+                case SUCCESS:
+                    if (CONFIRMATION) {
+                        for (int i = 3; i < 7; i++) {
+                            uid[i - 3] = res[i];
+                        }
+                    }
+                    break;
+                case UPDATE:
+                    switch (res[CONTEXT]) {
+                        case START_GAME:
+                            if (res[PAYLOAD] == X) {
+                                req[MSG_TYPE] = 4;      // Game action
+                                req[CONTEXT] = 1;       // Make a move
+                                req[PAYLOAD_LEN] = 1;
+                                printf("Your turn, place your move: ");
+                                cin >> choice;
+                                cout << "sent " << choice[0] << " to server!" << endl;
+                                choice[0] -= '0';
+                                req[PAYLOAD] = choice[0];
+                                bytes_sent = send(sockfd, req, sizeof(req), 0);
+                                update_board(req[PAYLOAD], playBoard, (count % 2 == 0 ? 'X' : 'O'));
+
+                                if (bytes_sent == -1)
+                                {
+                                    perror("Bytes could not be sent!");
+                                    return 1;
+                                }
+                                count++; // TO KEEP TRACK OF 'X' & 'O'
+                                this_player = 'X';
+                                other_player = 'O';
+                            }
+                            if (res[PAYLOAD] == O) {
+                                printf("Please wait for your turn\n");
+                                count--;
+                                this_player = 'O';
+                                other_player = 'X';
+                            }
+
+                            break;
+                        case MOVE_MADE: // receiving other player's move
+                            display();
+                            printf("Player %d has played\n", count % 2 == 0 ? 2 : 1);
+                            choice[0] = res[PAYLOAD];
+                            update_board(choice[0], playBoard, other_player);
+                            count++; // TO KEEP TRACK OF 'X' & 'O'
+
+                            req[MSG_TYPE] = 4;      // Game action
+                            req[CONTEXT] = 1;       // Make a move
+                            req[PAYLOAD_LEN] = 1;
+                            printf("Your turn, place your move: ");
+                            cin >> choice;
+                            cout << "sent " << choice[0] << " to server!" << endl;
+                            choice[0] -= '0';
+                            req[PAYLOAD] = choice[0];
+                            bytes_sent = send(sockfd, req, sizeof(req), 0);
+                            update_board(req[PAYLOAD], playBoard, this_player);
+
+                            if (bytes_sent == -1)
+                            {
+                                perror("Bytes could not be sent!");
+                                return 1;
+                            }
+
+                            break;
+                        case END_GAME:
+                            switch (res[PAYLOAD]) {
+                                case WIN:
+                                    printf("----- YOU WON! -----\n");
+                                    break;
+                                case LOSS:
+                                    printf("----- YOU LOSS! -----\n");
+                                    break;
+                            }
+                            close_conn = true;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
 //        for (int i = 0; i < 7; i++){
 //            printf("%d", server_buffer[i]);
 //        }
@@ -200,16 +287,12 @@ int main(int argc, char *argv[])
             //     default:
             //         break;
             // }
-            // /** UPDATE BOARD */
-            // if (server_buffer[0] >= 'A' && server_buffer[0] <= 'I') {
-            //         char sym = (count % 2 != 0) ? 'X' : 'O';
-            //         update_board(server_buffer[0], playBoard, sym);
-            // }
         }
-        free(req);
-        free(res);
+
         fflush(STDIN_FILENO);
     }
+    free(res);
+    free(req);
     std::cout << endl
               << "Thank You for playing Tic-tac-Toe" << endl;
     close(sockfd);
