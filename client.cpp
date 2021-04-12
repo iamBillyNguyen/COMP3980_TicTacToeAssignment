@@ -17,8 +17,8 @@
 #include "tictac.h"
 #include "shared.h"
 
-//#define SERV_HOST_ADDR "23.16.22.78"
- #define SERV_HOST_ADDR "127.0.0.1"
+#define SERV_HOST_ADDR "23.16.22.78"
+// #define SERV_HOST_ADDR "127.0.0.1"
 #define BOARD_SIZE 3
 using namespace std;
 
