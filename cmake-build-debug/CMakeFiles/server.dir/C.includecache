@@ -6,6 +6,26 @@
 
 #IncludeRegexTransform: 
 
+/home/billy/CLionProjects/COMP3980_Assignment1/RPSGame.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+stdbool.h
+-
+unistd.h
+-
+RPSGame.h
+/home/billy/CLionProjects/COMP3980_Assignment1/RPSGame.h
+shared.h
+/home/billy/CLionProjects/COMP3980_Assignment1/shared.h
+
+/home/billy/CLionProjects/COMP3980_Assignment1/RPSGame.h
+dcfsm/fsm.h
+-
+
 /home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.c
 stdio.h
 -
@@ -79,6 +99,8 @@ shared.h
 /home/billy/CLionProjects/COMP3980_Assignment1/shared.h
 TTTGame.c
 /home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.c
+RPSGame.c
+/home/billy/CLionProjects/COMP3980_Assignment1/RPSGame.c
 modules/utils.c
 /home/billy/CLionProjects/COMP3980_Assignment1/modules/utils.c
 

@@ -5,19 +5,21 @@
 using namespace std;
 
 
-void display();
+void display_ttt();
+void display_rps();
 int input(char, int, int);
+int get_game_option();
 
 
 /**
  * Function to display the formatting of the tic tac toe game.
  */
-void display()
+void display_ttt()
 {
 
     int i, j;
     system("clear");
-    std::cout<<"\n\n Spots"<<endl<<endl;
+    std::cout<<"\n\n-------------- Cells --------------"<<endl<<endl;
     char cell = '0';
     for (i=0; i<3; i++)
     {
@@ -27,10 +29,18 @@ void display()
             cell++;
         }
         std::cout<<endl;
-
     }
-
 }
+
+void display_rps() {
+    system("clear");
+    cout << "\n\n-------------- Rules --------------" <<endl<<endl;
+    cout << "Rock:      1"<<endl;
+    cout << "Paper:     2"<<endl;
+    cout << "Scissors:  3"<<endl;
+    cout << endl;
+}
+
 /**
  * Input validation.
  * @param choice player choice
@@ -66,4 +76,23 @@ void update_board(uint8_t cell, char board[9], char player) {
         printf("    --------------\n");
         printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
     }
+}
+
+int get_game_option() {
+    system("clear");
+    int answer;
+    bool done = false;
+    while(!done) {
+        cout << "-------------- Our game menu --------------" << endl;
+        cout << "Choose one:" << endl;
+        cout << "   1. Tic Tac Toe" << endl;
+        cout << "   2. Rock Paper Scissors" << endl;
+        cout << "Your choice: ";
+        cin >> answer;
+        if (answer < 1 || answer > 2)
+            cout << "Option not available. Choose again" << endl;
+        else
+            done = true;
+    }
+    return answer;
 }

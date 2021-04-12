@@ -3,23 +3,23 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "TTTGame.h"
+#include "RPSGame.h"
 #include "shared.h"
 
 typedef enum
 {
-    VALIDATE = FSM_APP_STATE_START,  // 2
-    ERROR,                           // 3
-    MIDGAME_QUIT,                    // 4
-} GameStates;
+    VALIDATE_RPS = FSM_APP_STATE_START,  // 2
+    ERROR_RPS,                           // 3
+    MIDGAME_QUIT_RPS,                    // 4
+} RPSGameStates;
 
-bool ttt_handle_move(TTTEnvironment *env) {
+bool rps_handle_move(RPSEnvironment *env) {
     StateTransition transitions[] =
             {
-                    {FSM_INIT, VALIDATE, &ttt_validate},
-                    {VALIDATE, ERROR, &ttt_error},
-                    {VALIDATE, FSM_EXIT, NULL},
-                    {ERROR, FSM_EXIT, NULL},
+                    {FSM_INIT, VALIDATE_RPS, &rps_validate},
+                    {VALIDATE_RPS, ERROR_RPS, &rps_error},
+                    {VALIDATE_RPS, FSM_EXIT, NULL},
+                    {ERROR_RPS, FSM_EXIT, NULL},
                     {FSM_IGNORE, FSM_IGNORE, NULL}
             };
 
@@ -41,58 +41,36 @@ bool ttt_handle_move(TTTEnvironment *env) {
     return EXIT_SUCCESS;
 }
 
-void init_ttt_game(Environment *env) {
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
+void init_rps_game(Environment *env) {
+    RPSEnvironment *game_env;
+    game_env = (RPSEnvironment *)env;
 
     game_env->client_num = 2;
-    game_env->turn = 0;
-    game_env->player2_turn = false;
     game_env->done = false;
     game_env->player_c = 'X';
     game_env->res = (uint8_t*) dc_malloc(sizeof(uint8_t) * 4);
 
-    for (int i = 0; i < 9; i++) {
-        game_env->playBoard[i] = ' ';
-        game_env->occupy[i] = false;
-    }
+    bzero(game_env->moves, sizeof(game_env->moves));
 }
 
-static int ttt_validate(Environment *env)
+static int rps_validate(Environment *env)
 {
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
+    RPSEnvironment *game_env;
+    game_env = (RPSEnvironment *)env;
     if (game_env->c == EOF || game_env->c == '-') { // If player quits midway
         printf("Player quits midgame\n");
         // Accept a new player
         //game_env->player[game_env->player2_turn] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->player2_turn], &(game_env->slen));
-        return MIDGAME_QUIT;
+        return MIDGAME_QUIT_RPS;
     }
-    if (game_env->c < 0 || game_env->c > 8)
+    if (game_env->c < 0 || game_env->c > 3)
     {
-        game_env->turn--;
-        return ERROR;
-    }
-    int index = game_env->c;
-    if (game_env->occupy[index])
-    {
-        game_env->turn--;
         return ERROR;
     }
 
-    if (game_env->player2_turn)
-    {
-        game_env->player_c = 'O';
-    }
-    else
-    {
-        game_env->player_c = 'X';
-    }
-
-    update_ttt_board(game_env->c, game_env->playBoard, game_env->player_c, env);
-
-    char key = ttt_check(game_env->playBoard);
-    if (key == 'X') {
+    uint8_t key = rps_check(game_env->moves);
+    printf("KEY %x\n", key);
+    if (key == 0) {
         printf("----- Player 1 won! -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
@@ -105,7 +83,7 @@ static int ttt_validate(Environment *env)
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
-    } else if (key == 'O') {
+    } else if (key == 1) {
         printf("----- Player 2 won! -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
@@ -118,9 +96,7 @@ static int ttt_validate(Environment *env)
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
-    }
-
-    if (game_env->turn == TOTAL_TURNS)
+    } else if (key == ' ')
     {
         printf("----- TIE -----\n");
         game_env->done = true;
@@ -133,63 +109,29 @@ static int ttt_validate(Environment *env)
         }
         return FSM_EXIT;
     }
+
     /** SEND POSITION/CHOICE TO CLIENTS */
     game_env->res[MSG_TYPE] = UPDATE;
     game_env->res[CONTEXT] = MOVE_MADE;
     game_env->res[PAYLOAD_LEN] = 1;
     game_env->res[PAYLOAD] = game_env->c;
-    game_env->player2_turn = !game_env->player2_turn;
-    send(game_env->player[game_env->player2_turn ? 1 : 0], game_env->res, sizeof(game_env->res), 0);
+    //send(game_env->player[game_env->player2_turn ? 1 : 0], game_env->res, sizeof(game_env->res), 0);
 
     return FSM_EXIT;
 }
-static void update_ttt_board(uint8_t c, char board[9], char player, Environment *env)
-{
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-
-    if (board[c] == ' ') {
-        board[c] = player;
-        game_env->occupy[c] = true;
-    }
-
-    printf("    %c  | %c  | %c\n", board[0], board[1], board[2]);
-    printf("    --------------\n");
-    printf("    %c  | %c  | %c\n", board[3], board[4], board[5]);
-    printf("    --------------\n");
-    printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
-}
 
 /** CHECK FOR WIN, LOSE, OR TIE */
-char ttt_check(char playBoard[9])
+uint8_t rps_check(uint8_t moves[2])
 {
-    int i;
-    char key = ' ';
-
-    // Check Rows
-    for (i = 0; i < 9; i+=3) {
-        if (playBoard[i] == playBoard[i + 1] && playBoard[i] == playBoard[i + 2] && playBoard[i] != ' ') {
-            key = playBoard[i];
-            break;
-        }
-    }
-    // check Columns
-    for (i = 0; i < 3; i++) {
-        if (playBoard[i] == playBoard[i + 3] && playBoard[i] == playBoard[i + 6] && playBoard[i] != ' ') {
-            key = playBoard[i];
-            break;
-        }
-    }
-    // Check Diagonals
-    if (playBoard[0] == playBoard[4] && playBoard[0] == playBoard[8] && playBoard[0] != ' ')
-        key = playBoard[0];
-    if (playBoard[2] == playBoard[4] && playBoard[2] == playBoard[6] && playBoard[0] != ' ')
-        key = playBoard[2];
+    uint8_t key = ' ';
+    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++)
+        if ((moves[i] == ROCK && moves[i == 0 ? 1 : 0] == SCISSORS) || (moves[i] == PAPER && moves[i == 0 ? 1 : 0] == ROCK) || (moves[i] == SCISSORS && moves[i == 0 ? 1 : 0] == PAPER))
+            key = (uint8_t) i;
 
     return key;
 }
 
-static int ttt_error(Environment *env)
+static int rps_error(Environment *env)
 {
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;

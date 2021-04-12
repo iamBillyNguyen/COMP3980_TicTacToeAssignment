@@ -31,6 +31,7 @@
 #include <errno.h>
 #include "shared.h"
 #include "TTTGame.c"
+#include "RPSGame.c"
 #include "modules/utils.c"
 
 #define BACKLOG 2
@@ -43,13 +44,14 @@
 typedef struct {
     Environment common;
     struct sockaddr_in addr;
-    int sfd, slen, max_sd, size, index, ttt_client_num, rps_client_num, len, udpfd;
+    int sfd, slen, max_sd, size, ttt_index, ttt_client_num, rps_index, rps_client_num, len, udpfd;
     fd_set readfds, workingfds;
-    int *player_socket;
+    int *ttt_player_socket, *rps_player_socket;
     TTTEnvironment *ttt_game_list;
+    RPSEnvironment *rps_game_list;
     uint8_t msg_type, context, payload, payload_len;
     uint8_t *res, *req;
-    uint8_t buffer[BUF_LEN]
+    uint8_t buffer[BUF_LEN];
 } ServEnvironment;
 
 static int init_server(Environment *env);
@@ -62,9 +64,8 @@ static int clean_up_serv(Environment *env);
 
 /**
  * TODO:
- * - Add ERROR handling
- * - Add Rock Paper Scissors
- * (RPSEnvironment, and handling inside client.cpp + server.c)
+ * - Check if payload has been received in RPSGame and rps_check
+ * - Add ERROR handling for RPS
  */
 
 typedef enum
@@ -113,7 +114,8 @@ int main()
 
         return EXIT_FAILURE;
     }
-    free(env.player_socket);
+    free(env.ttt_player_socket);
+    free(env.rps_player_socket);
     free(env.ttt_game_list);
     return EXIT_SUCCESS;
 }
@@ -129,11 +131,14 @@ static int init_server(Environment *env) {
     serv_env->addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     serv_env->size = 2;
-    serv_env->index = 0;
+    serv_env->ttt_index = 0;
+    serv_env->rps_index = 0;
     serv_env->ttt_client_num = 0;
     serv_env->rps_client_num = 0;
     serv_env->ttt_game_list = (TTTEnvironment *)dc_malloc(sizeof(TTTEnvironment) * N);
-    serv_env->player_socket = (int *)dc_malloc(2 * N * sizeof(int));
+    serv_env->rps_game_list = (RPSEnvironment *)dc_malloc(sizeof(RPSEnvironment) * N);
+    serv_env->ttt_player_socket = (int *)dc_malloc(2 * N * sizeof(int));
+    serv_env->rps_player_socket = (int *)dc_malloc(2 * N * sizeof(int));
     serv_env->req = dc_malloc(sizeof(uint8_t)  * 9);
     serv_env->res = dc_malloc(sizeof(uint8_t)  * 4);
     return BIND;
@@ -174,23 +179,19 @@ static int listen_serv(Environment *env) {
 
 void assign_player(ServEnvironment *serv_env, uint8_t game_id) {
     // Assigning 2 new players to a game
-    int total_client;
     switch (game_id) {
         case TIC_TAC_TOE:
-            total_client = serv_env->ttt_client_num;
+            for (int j = (serv_env->ttt_client_num - 2), x = 0; j < serv_env->ttt_client_num, x < 2; j++, x++) {
+                serv_env->ttt_game_list[serv_env->ttt_index].player[x] = serv_env->ttt_player_socket[j];
+            }
             break;
         case ROCK_PAPER_SCISSOR:
-            total_client = serv_env->rps_client_num;
+            for (int j = (serv_env->rps_client_num - 2), x = 0; j < serv_env->rps_client_num, x < 2; j++, x++) {
+                serv_env->rps_game_list[serv_env->rps_index].player[x] = serv_env->rps_player_socket[j];
+            }
             break;
         default:
             break;
-    }
-//    int a = (serv_env->player_socket[total_client  - 2] - serv_env->sfd - 1) / 2;
-
-    // TODO: Change later for RPS
-
-    for (int j = (total_client - 2), x = 0; j < total_client, x < 2; j++, x++) {
-        serv_env->ttt_game_list[serv_env->index].player[x] = serv_env->player_socket[j];
     }
 }
 
@@ -199,8 +200,8 @@ void set_new_ttt_game(ServEnvironment *serv_env) {
     memset(serv_env->res, 0, sizeof(serv_env->res));
 
     game_env = dc_malloc(sizeof(TTTEnvironment));
-    init_game((Environment*)game_env);
-    serv_env->ttt_game_list[serv_env->index] = *game_env;
+    init_ttt_game((Environment*)game_env);
+    serv_env->ttt_game_list[serv_env->ttt_index] = *game_env;
 
     assign_player(serv_env, TIC_TAC_TOE);
     for (int i = 0; i < NUM_PLAYER_PER_GAME; i++) {
@@ -209,10 +210,31 @@ void set_new_ttt_game(ServEnvironment *serv_env) {
         serv_env->res[CONTEXT] = START_GAME;
         serv_env->res[PAYLOAD] = (i == 0) ? X : O;
         serv_env->res[PAYLOAD_LEN] = 1;
-        send(serv_env->ttt_game_list[serv_env->index].player[i], serv_env->res, sizeof(serv_env->res), 0);
+        send(serv_env->ttt_game_list[serv_env->ttt_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
     }
     // TODO: Client needs to receive the res, and check the payload for X or O for turn
-    serv_env->index++;
+    serv_env->ttt_index++;
+}
+
+void set_new_rps_game(ServEnvironment *serv_env) {
+    RPSEnvironment *game_env;
+    memset(serv_env->res, 0, sizeof(serv_env->res));
+
+    game_env = dc_malloc(sizeof(RPSEnvironment));
+    init_rps_game((Environment*)game_env);
+    serv_env->rps_game_list[serv_env->rps_index] = *game_env;
+
+    assign_player(serv_env, ROCK_PAPER_SCISSOR);
+    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++) {
+        memset(serv_env->res, 0, sizeof(serv_env->res));
+        serv_env->res[MSG_TYPE] = UPDATE;
+        serv_env->res[CONTEXT] = START_GAME;
+        serv_env->res[PAYLOAD] = ' ';
+        serv_env->res[PAYLOAD_LEN] = 0;
+        send(serv_env->rps_game_list[serv_env->rps_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
+    }
+    // TODO: Client needs to receive the res, and check the payload for X or O for turn
+    serv_env->rps_index++;
 }
 
 static int accept_serv(Environment *env) {
@@ -260,7 +282,7 @@ static int accept_serv(Environment *env) {
                             if (serv_env->ttt_client_num % 2 == 0 && serv_env->ttt_client_num != 0) {
                                 TTTEnvironment *tmp = (TTTEnvironment *) realloc(serv_env->ttt_game_list,
                                                                                  N * sizeof(TTTEnvironment));
-                                int *tmp2 = (int *) realloc(serv_env->player_socket,
+                                int *tmp2 = (int *) realloc(serv_env->ttt_player_socket,
                                                             (NUM_PLAYER_PER_GAME * N) * sizeof(int));
 
                                 if (!tmp || !tmp2) {
@@ -268,7 +290,20 @@ static int accept_serv(Environment *env) {
                                     return ERROR_SERV;
                                 }
                                 serv_env->ttt_game_list = tmp;
-                                serv_env->player_socket = tmp2;
+                                serv_env->ttt_player_socket = tmp2;
+                            }
+                            if (serv_env->rps_client_num % 2 == 0 && serv_env->rps_client_num != 0) {
+                                TTTEnvironment *tmp = (TTTEnvironment *) realloc(serv_env->rps_game_list,
+                                                                                 N * sizeof(TTTEnvironment));
+                                int *tmp2 = (int *) realloc(serv_env->rps_game_list,
+                                                            (NUM_PLAYER_PER_GAME * N) * sizeof(int));
+
+                                if (!tmp || !tmp2) {
+                                    perror("realloc\n");
+                                    return ERROR_SERV;
+                                }
+                                serv_env->rps_game_list = tmp;
+                                serv_env->rps_player_socket = tmp2;
                             }
                             // ONLY USE BUFFER FOR RECV
                             recv(new_sd, serv_env->buffer, sizeof(serv_env->buffer), 0);
@@ -300,13 +335,11 @@ static int accept_serv(Environment *env) {
                                             serv_env->res[PAYLOAD_LEN] = UID_SIZE;
                                             send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
                                             val = convert_uid_to_1byte(uid);
-                                            serv_env->player_socket[serv_env->ttt_client_num] = new_sd;
+                                            serv_env->ttt_player_socket[serv_env->ttt_client_num] = new_sd;
                                             serv_env->ttt_client_num++;
-                                            printf("client_num %d\n", serv_env->ttt_client_num);
 
                                             if (serv_env->ttt_client_num % 2 == 0) // 2 players
                                                 set_new_ttt_game(serv_env);
-                                            // TODO: Do something;
                                             break;
                                         case ROCK_PAPER_SCISSOR:
                                             printf("ROCK_PAPER_SCISSOR\n");
@@ -322,7 +355,11 @@ static int accept_serv(Environment *env) {
                                             serv_env->res[PAYLOAD_LEN] = UID_SIZE;
                                             send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
                                             val = convert_uid_to_1byte(uid);
-                                            // TODO: Do something
+                                            serv_env->rps_player_socket[serv_env->rps_client_num] = new_sd;
+                                            serv_env->rps_client_num++;
+
+                                            if (serv_env->rps_client_num % 2 == 0) // 2 players
+                                                set_new_rps_game(serv_env);
                                             break;
                                         default:
                                             printf("Server only supports TTT and RPS!\n");
@@ -351,7 +388,7 @@ static int accept_serv(Environment *env) {
                                     serv_env->res[PAYLOAD_LEN] = 0;
                                     serv_env->res[PAYLOAD] = ' ';
                                     // SENDING DISCONNECTED RESPONSE TO OTHER PLAYER
-                                    for (int z = 0; z < serv_env->index; z++) {
+                                    for (int z = 0; z < serv_env->ttt_index; z++) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->ttt_game_list[z].player[y] == i) {
                                                 send(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0], serv_env->res, sizeof(serv_env->res), 0);
@@ -368,14 +405,14 @@ static int accept_serv(Environment *env) {
                                     serv_env->ttt_client_num--;
                                     break;
                                 } else {
-                                    for (int z = 0; z < serv_env->index; z++) {
+                                    for (int z = 0; z < serv_env->ttt_index; z++) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->ttt_game_list[z].player[y] == i) {
                                                 serv_env->ttt_game_list[z].turn++;
                                                 serv_env->ttt_game_list[z].c = serv_env->req[REQ_PAYLOAD];
                                                 printf("Player %d wrote: %x\n", (i - serv_env->sfd - 1),
                                                        serv_env->ttt_game_list[z].c);
-                                                handle_move(&(serv_env->ttt_game_list[z]));
+                                                ttt_handle_move(&(serv_env->ttt_game_list[z]));
                                                 if (serv_env->ttt_game_list[z].done) {
                                                     close_conn = 1;
                                                     serv_env->ttt_client_num--;
@@ -384,6 +421,23 @@ static int accept_serv(Environment *env) {
                                                         serv_env->ttt_game_list[z].player[1] = 0;
                                                     else
                                                         serv_env->ttt_game_list[z].player[0] = 0;
+                                                }
+                                                break;
+                                            }
+                                            if (serv_env->rps_game_list[z].player[y] == i) {
+                                                serv_env->rps_game_list[z].moves[y == 0 ? 0 : 1] = serv_env->req[REQ_PAYLOAD];
+                                                printf("Player %d wrote: %x\n", (i - serv_env->sfd - 1),
+                                                       serv_env->req[REQ_PAYLOAD]);
+                                                if (serv_env->rps_game_list[z].moves[y == 0 ? 1 : 0] != 0) // check if both players have placed their move
+                                                    rps_handle_move(&(serv_env->rps_game_list[z]));
+                                                if (serv_env->rps_game_list[z].done) {
+                                                    close_conn = 1;
+                                                    serv_env->rps_client_num--;
+                                                    serv_env->rps_game_list[z].player[y] = 0;
+                                                    if (y == 0)
+                                                        serv_env->rps_game_list[z].player[1] = 0;
+                                                    else
+                                                        serv_env->rps_game_list[z].player[0] = 0;
                                                 }
                                                 break;
                                             }
