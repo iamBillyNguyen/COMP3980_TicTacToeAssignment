@@ -24,38 +24,6 @@ using namespace std;
 
 // gcc client.cpp -o client -lstdc++
 
-void reset_board(char b[][3]) {
-    for (int  i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (i == 0){
-                b[i][j] = 0 + j;
-            } else if (i == 1) {
-                b[i][j] = 3 + j;
-            } else {
-                b[i][j] = 6 + j;
-            }
-        }
-    }
-}
-
-void check_opt(uint8_t choice, char b[][3]) {
-    while (true) {
-        if (choice == 'q') {
-            exit(EXIT_SUCCESS);
-        } else if (choice == 'r') {
-            reset_board(b);
-            printf("Awaiting player to join ...\n");
-            break;
-        } else {
-            memset(&choice, 0, sizeof(choice));
-            printf("Invalid choice! Please re-enter\n");
-            printf("Type q to quit\nOR\nType r to replay\n>> ");
-            cin >> choice;
-        }
-    }
-    display();
-}
-
 /**
  * Main loop to drive the client program
  * @param argc
@@ -75,8 +43,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 9; i++)
         playBoard[i] = ' ';
 
-    uint8_t *req;
-    req = (uint8_t *) malloc(4 * sizeof(uint8_t));
+    uint8_t *req, confirm_req[9];
+    req = (uint8_t *) malloc(8 * sizeof(uint8_t));
     uint8_t *res;
     res = (uint8_t *) malloc(4 * sizeof(uint8_t));
     uint8_t choice[2];
@@ -106,15 +74,17 @@ int main(int argc, char *argv[])
         memset(res, 0, sizeof(res));
 
         if (!connected) {
-            req[0] = 1;
-            req[1] = 1;
-            req[2] = 1;
-            req[3] = 1;
-            req[4] = TIC_TAC_TOE;
+            memset(confirm_req, 0, sizeof(confirm_req));
+            confirm_req[REQ_TYPE] = CONFIRMATION;
+            confirm_req[REQ_CONTEXT] = CONFIRM_RULESET;
+            confirm_req[REQ_PAYLOAD_LEN] = 2;
+            confirm_req[REQ_PAYLOAD] = 1;   // Version number
+            confirm_req[REQ_PAYLOAD + 1] = TIC_TAC_TOE;   // Game ID
+            printf("Game ID: %x\n", confirm_req[REQ_PAYLOAD + 1]);
             // response from server
 //        recv(sockfd, &server_buffer, sizeof(server_buffer), 0);
 
-            send(sockfd, req, sizeof(req), 0);
+            send(sockfd, confirm_req, sizeof(confirm_req), 0);
             recv(sockfd, res, sizeof(res), 0);
             printf("Your uid: ");
             for (int i = 3; i < 7; i++) {
@@ -137,16 +107,18 @@ int main(int argc, char *argv[])
                     switch (res[CONTEXT]) {
                         case START_GAME:
                             if (res[PAYLOAD] == X) {
-                                req[MSG_TYPE] = 4;      // Game action
-                                req[CONTEXT] = 1;       // Make a move
-                                req[PAYLOAD_LEN] = 1;
+                                for (int i = 0; i < 4; i++)
+                                    req[i] = uid[i];
+                                req[REQ_TYPE] = 4;      // Game action
+                                req[REQ_CONTEXT] = 1;       // Make a move
+                                req[REQ_PAYLOAD_LEN] = 1;
                                 printf("Your turn, place your move: ");
                                 cin >> choice;
                                 cout << "sent " << choice[0] << " to server!" << endl;
                                 choice[0] -= '0';
-                                req[PAYLOAD] = choice[0];
+                                req[REQ_PAYLOAD] = choice[0];
                                 bytes_sent = send(sockfd, req, sizeof(req), 0);
-                                update_board(req[PAYLOAD], playBoard, (count % 2 == 0 ? 'X' : 'O'));
+                                update_board(req[REQ_PAYLOAD], playBoard, (count % 2 == 0 ? 'X' : 'O'));
 
                                 if (bytes_sent == -1)
                                 {
@@ -172,16 +144,18 @@ int main(int argc, char *argv[])
                             update_board(choice[0], playBoard, other_player);
                             count++; // TO KEEP TRACK OF 'X' & 'O'
 
-                            req[MSG_TYPE] = 4;      // Game action
-                            req[CONTEXT] = 1;       // Make a move
+                            for (int i = 0; i < 4; i++)
+                                req[i] = uid[i]; // uid
+                            req[REQ_TYPE] = GAME_ACTION;      // Game action
+                            req[REQ_CONTEXT] = MAKE_MOVE;       // Make a move
                             req[PAYLOAD_LEN] = 1;
                             printf("Your turn, place your move: ");
                             cin >> choice;
                             cout << "sent " << choice[0] << " to server!" << endl;
                             choice[0] -= '0';
-                            req[PAYLOAD] = choice[0];
+                            req[REQ_PAYLOAD] = choice[0];
                             bytes_sent = send(sockfd, req, sizeof(req), 0);
-                            update_board(req[PAYLOAD], playBoard, this_player);
+                            update_board(req[REQ_PAYLOAD], playBoard, this_player);
 
                             if (bytes_sent == -1)
                             {
@@ -196,14 +170,54 @@ int main(int argc, char *argv[])
                                     printf("----- YOU WON! -----\n");
                                     break;
                                 case LOSS:
+                                    count++;
+                                    printf("Player %d has played\n", count % 2 == 0 ? 2 : 1);
+                                    choice[0] = res[PAYLOAD + 1];
+                                    update_board(choice[0], playBoard, other_player);
                                     printf("----- YOU LOSS! -----\n");
                                     break;
+                                case TIE:
+                                    printf("----- GAME TIES! -----\n");
+                                    break;
+                                default:
+                                    break;
                             }
+                            close_conn = true;
+                            break;
+                        case OPPONENT_DISCONNECTED:
+                            printf("Your opponent has disconnected\nThe game will end here!\n");
                             close_conn = true;
                             break;
                         default:
                             break;
                     }
+                    break;
+                case INVALID_ACTION:
+                    switch (res[CONTEXT]) {
+                        case GAME_ACTION:
+                            printf("Invalid move! Re-enter: ");
+                            cin >> choice;
+                            for (int i = 0; i < 4; i++)
+                                req[i] = uid[i]; // uid
+                            req[REQ_TYPE] = GAME_ACTION;      // Game action
+                            req[REQ_CONTEXT] = MAKE_MOVE;       // Make a move
+                            req[PAYLOAD_LEN] = 1;
+                            cout << "sent " << choice[0] << " to server!" << endl;
+                            choice[0] -= '0';
+                            req[REQ_PAYLOAD] = choice[0];
+                            bytes_sent = send(sockfd, req, sizeof(req), 0);
+
+                            if (bytes_sent == -1)
+                            {
+                                perror("Bytes could not be sent!");
+                                return 1;
+                            }
+                            update_board(choice[0], playBoard, this_player);
+                            break;
+                        default:
+                            break;
+                    }
+
                     break;
                 default:
                     break;

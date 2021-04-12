@@ -57,11 +57,13 @@ int input(char choice[])
  * @param player player
  */
 void update_board(uint8_t cell, char board[9], char player) {
-    board[cell] = player;
+    if (board[cell] == ' ') {
+        board[cell] = player;
 
-    printf("    %c  | %c  | %c\n", board[0], board[1], board[2]);
-    printf("    --------------\n");
-    printf("    %c  | %c  | %c\n", board[3], board[4], board[5]);
-    printf("    --------------\n");
-    printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
+        printf("    %c  | %c  | %c\n", board[0], board[1], board[2]);
+        printf("    --------------\n");
+        printf("    %c  | %c  | %c\n", board[3], board[4], board[5]);
+        printf("    --------------\n");
+        printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
+    }
 }

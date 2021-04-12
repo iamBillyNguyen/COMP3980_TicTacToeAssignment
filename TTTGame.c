@@ -100,6 +100,8 @@ static int validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 0) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
+                game_env->res[PAYLOAD + 1] = game_env->c;
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
@@ -111,6 +113,8 @@ static int validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 1) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
+                game_env->res[PAYLOAD + 1] = game_env->c;
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
@@ -191,31 +195,36 @@ static int error(Environment *env)
     game_env = (TTTEnvironment *)env;
 
     printf("Invalid move player %d, place again!\n", game_env->player2_turn ? 2 : 1);
+    game_env->res[MSG_TYPE] = INVALID_ACTION;
+    game_env->res[CONTEXT] = GAME_ACTION;
+    game_env->res[PAYLOAD_LEN] = 0;
+    game_env->res[PAYLOAD] = ' ';
+    send(game_env->player[game_env->player2_turn], game_env->res, sizeof(game_env->res), 0);
 //    send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
 //    send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
 
     return FSM_EXIT;
 }
 
-static void check_user_choice(Environment *env) {
-    TTTEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
-    int player_num = 2;
-
-    if (game_env->c != 'r') {
-        memset(&(game_env->player[0]), 0, sizeof(game_env->player[0]));
-        player_num--;
-    }
-    if (game_env->c != 'r') {
-        memset(&(game_env->player[1]), 0, sizeof(game_env->player[1]));
-        player_num--;
-    }
-    if (player_num == 1) {
-        game_env->client_num--;
-    } else if (player_num == 0){
-        game_env->client_num = 0;
-    }
-}
+//static void check_user_choice(Environment *env) {
+//    TTTEnvironment *game_env;
+//    game_env = (TTTEnvironment *)env;
+//    int player_num = 2;
+//
+//    if (game_env->c != 'r') {
+//        memset(&(game_env->player[0]), 0, sizeof(game_env->player[0]));
+//        player_num--;
+//    }
+//    if (game_env->c != 'r') {
+//        memset(&(game_env->player[1]), 0, sizeof(game_env->player[1]));
+//        player_num--;
+//    }
+//    if (player_num == 1) {
+//        game_env->client_num--;
+//    } else if (player_num == 0){
+//        game_env->client_num = 0;
+//    }
+//}
 
 
 
