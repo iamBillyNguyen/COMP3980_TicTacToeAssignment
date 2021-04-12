@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.c
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/TTTGame.c
 stdio.h
 -
 stdlib.h
@@ -16,15 +16,15 @@ string.h
 unistd.h
 -
 TTTGame.h
-/home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.h
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/TTTGame.h
 shared.h
-/home/billy/CLionProjects/COMP3980_Assignment1/shared.h
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/shared.h
 
-/home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.h
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/TTTGame.h
 dcfsm/fsm.h
 -
 
-/home/billy/CLionProjects/COMP3980_Assignment1/server.c
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/server.c
 stdio.h
 -
 stdlib.h
@@ -56,9 +56,9 @@ netinet/in.h
 errno.h
 -
 shared.h
-/home/billy/CLionProjects/COMP3980_Assignment1/shared.h
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/shared.h
 TTTGame.c
-/home/billy/CLionProjects/COMP3980_Assignment1/TTTGame.c
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/TTTGame.c
 
-/home/billy/CLionProjects/COMP3980_Assignment1/shared.h
+/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/shared.h
 
