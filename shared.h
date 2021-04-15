@@ -7,6 +7,7 @@
 // https://www.sciencedirect.com/topics/computer-science/registered-port#:~:text=Ports%200%20through%201023%20are,be%20used%20dynamically%20by%20applications.
 // /etc/services
 #define PORT 8080
+#define DATAGRAM_SIZE 5008
 
 // For Client's request
 #define UID_1 0
@@ -122,4 +123,12 @@
 #define ROCK 1
 #define PAPER 2
 #define SCISSORS 3
+
+/**
+ * UDP VOICE CHAT PROTOCOL
+ */
+
+#define ORDERING 0
+#define UID_UDP 4
+#define PAYLOAD_UDP 8
 #endif

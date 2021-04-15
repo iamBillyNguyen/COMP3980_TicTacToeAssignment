@@ -34,12 +34,9 @@
 #include "RPSGame.c"
 #include "modules/utils.c"
 
-#define BACKLOG 2
 #define N 10
-#define MAX_BYTES 7
 #define UID_SIZE 4
 #define BUF_LEN 100
-#define GAME_ID_POS 4
 
 typedef struct {
     Environment common;
@@ -52,6 +49,7 @@ typedef struct {
     uint8_t msg_type, context, payload, payload_len;
     uint8_t *res, *req;
     uint8_t buffer[BUF_LEN];
+    uint8_t datagram[DATAGRAM_SIZE];
 } ServEnvironment;
 
 static int init_server(Environment *env);
@@ -480,14 +478,15 @@ static int accept_serv(Environment *env) {
 //                               (struct sockaddr *) &i, &len);
 //                    }
 //                }
-                char buffer[2];
+
                 len = sizeof(new_sd);
-                bzero(buffer, sizeof(buffer));
+                bzero(serv_env->datagram, sizeof(serv_env->datagram));
                 printf("\nMessage from UDP client: ");
-                recvfrom(serv_env->udpfd, buffer, sizeof(buffer), 0,
+                recvfrom(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                          (struct sockaddr *) &new_sd, &len);
-                puts(buffer);
-                sendto(serv_env->udpfd, buffer, sizeof(buffer), 0,
+
+                //puts(buffer);
+                sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                        (struct sockaddr *) &new_sd, &len);
                 break;
             }
