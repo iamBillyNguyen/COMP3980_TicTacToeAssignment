@@ -9,10 +9,10 @@
 typedef struct
 {
     Environment common;
-    uint8_t c, player_c, moves[NUM_PLAYER_PER_GAME];
+    uint8_t c, moves[NUM_PLAYER_PER_GAME];
     bool done;
     int player[NUM_PLAYER_PER_GAME];
-    int client_num;
+    int client_num, player_turn;
     uint8_t* res;
 } RPSEnvironment;
 

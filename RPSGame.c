@@ -9,7 +9,7 @@
 typedef enum
 {
     VALIDATE_RPS = FSM_APP_STATE_START,  // 2
-    ERROR_RPS,                           // 3
+    RPS_ERROR,                           // 3
     MIDGAME_QUIT_RPS,                    // 4
 } RPSGameStates;
 
@@ -17,9 +17,9 @@ bool rps_handle_move(RPSEnvironment *env) {
     StateTransition transitions[] =
             {
                     {FSM_INIT, VALIDATE_RPS, &rps_validate},
-                    {VALIDATE_RPS, ERROR_RPS, &rps_error},
+                    {VALIDATE_RPS, RPS_ERROR, &rps_error},
                     {VALIDATE_RPS, FSM_EXIT, NULL},
-                    {ERROR_RPS, FSM_EXIT, NULL},
+                    {RPS_ERROR, FSM_EXIT, NULL},
                     {FSM_IGNORE, FSM_IGNORE, NULL}
             };
 
@@ -47,7 +47,6 @@ void init_rps_game(Environment *env) {
 
     game_env->client_num = 2;
     game_env->done = false;
-    game_env->player_c = 'X';
     game_env->res = (uint8_t*) dc_malloc(sizeof(uint8_t) * 4);
 
     bzero(game_env->moves, sizeof(game_env->moves));
@@ -57,17 +56,12 @@ static int rps_validate(Environment *env)
 {
     RPSEnvironment *game_env;
     game_env = (RPSEnvironment *)env;
-    if (game_env->c == EOF || game_env->c == '-') { // If player quits midway
-        printf("Player quits midgame\n");
-        // Accept a new player
-        //game_env->player[game_env->player2_turn] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->player2_turn], &(game_env->slen));
-        return MIDGAME_QUIT_RPS;
+    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++) {
+        if (game_env->moves[i] < 0 || game_env->moves[i] > 3) {
+            game_env->player_turn = i;
+            return RPS_ERROR;
+        }
     }
-    if (game_env->c < 0 || game_env->c > 3)
-    {
-        return ERROR;
-    }
-
     uint8_t key = rps_check(game_env->moves);
     printf("KEY %x\n", key);
     if (key == 0) {
@@ -78,8 +72,10 @@ static int rps_validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 0) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
+                game_env->res[PAYLOAD + 1] = game_env->moves[0];
             if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
+                game_env->res[PAYLOAD + 1] = game_env->moves[1];
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
@@ -91,8 +87,10 @@ static int rps_validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 1) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
+                game_env->res[PAYLOAD + 1] = game_env->moves[1];
             if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
+                game_env->res[PAYLOAD + 1] = game_env->moves[0];
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
@@ -110,12 +108,12 @@ static int rps_validate(Environment *env)
         return FSM_EXIT;
     }
 
-    /** SEND POSITION/CHOICE TO CLIENTS */
+    /** SUCCESS RESPONSE BACK TO CLIENTS */
     game_env->res[MSG_TYPE] = UPDATE;
     game_env->res[CONTEXT] = MOVE_MADE;
-    game_env->res[PAYLOAD_LEN] = 1;
-    game_env->res[PAYLOAD] = game_env->c;
-    //send(game_env->player[game_env->player2_turn ? 1 : 0], game_env->res, sizeof(game_env->res), 0);
+    game_env->res[PAYLOAD_LEN] = 0;
+    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++)
+        send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
 
     return FSM_EXIT;
 }
@@ -133,40 +131,17 @@ uint8_t rps_check(uint8_t moves[2])
 
 static int rps_error(Environment *env)
 {
-    TTTEnvironment *game_env;
+    RPSEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
 
-    printf("Invalid move player %d, place again!\n", game_env->player2_turn ? 2 : 1);
+    printf("Invalid move player %d, place again!\n", game_env->player_turn + 1);
     game_env->res[MSG_TYPE] = INVALID_ACTION;
     game_env->res[CONTEXT] = GAME_ACTION;
     game_env->res[PAYLOAD_LEN] = 0;
     game_env->res[PAYLOAD] = ' ';
-    send(game_env->player[game_env->player2_turn], game_env->res, sizeof(game_env->res), 0);
+    send(game_env->player[game_env->player_turn], game_env->res, sizeof(game_env->res), 0);
 //    send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
 //    send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
 
     return FSM_EXIT;
 }
-
-//static void check_user_choice(Environment *env) {
-//    TTTEnvironment *game_env;
-//    game_env = (TTTEnvironment *)env;
-//    int player_num = 2;
-//
-//    if (game_env->c != 'r') {
-//        memset(&(game_env->player[0]), 0, sizeof(game_env->player[0]));
-//        player_num--;
-//    }
-//    if (game_env->c != 'r') {
-//        memset(&(game_env->player[1]), 0, sizeof(game_env->player[1]));
-//        player_num--;
-//    }
-//    if (player_num == 1) {
-//        game_env->client_num--;
-//    } else if (player_num == 0){
-//        game_env->client_num = 0;
-//    }
-//}
-
-
-

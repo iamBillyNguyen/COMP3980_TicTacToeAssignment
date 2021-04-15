@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     int sockfd,  n, connectfd, bytes_sent;
     struct sockaddr_in serv_addr;
     int count = 0, game_id;
-    bool connected = false, close_conn = false;
+    bool connected = false, close_conn = false, accepted = false;
     auto *uid = (uint8_t*) calloc(4, sizeof(uint8_t));
     char playBoard[9];
     char this_player, other_player;
@@ -113,8 +113,13 @@ int main(int argc, char *argv[])
             switch (res[MSG_TYPE]) {
                 case SUCCESS:
                     if (CONFIRMATION) {
-                        for (int i = 3; i < 7; i++) {
-                            uid[i - 3] = res[i];
+                        if (!accepted) {
+                            for (int i = 3; i < 7; i++)
+                                uid[i - 3] = res[i];
+                            accepted = true;
+                        } else {
+                            printf("SUCCESS move\n");
+                            break;
                         }
                     }
                     break;
@@ -143,6 +148,8 @@ int main(int argc, char *argv[])
                                     count++; // TO KEEP TRACK OF 'X' & 'O'
                                     this_player = 'X';
                                     other_player = 'O';
+
+                                    printf("Awaiting for player 2\n");
                                 }
                                 if (res[PAYLOAD] == O) {
                                     printf("Please wait for your turn\n");
@@ -162,16 +169,20 @@ int main(int argc, char *argv[])
                                 choice[0] -= '0';
                                 req[REQ_PAYLOAD] = choice[0];
                                 bytes_sent = send(sockfd, req, sizeof(req), 0);
+
+                                if (bytes_sent == -1)
+                                {
+                                    perror("Bytes could not be sent!");
+                                    return 1;
+                                }
                             }
 
                             break;
-                        case MOVE_MADE: // receiving other player's move
-                            if (game_id == TIC_TAC_TOE)
-                                display_ttt();
+                        case MOVE_MADE: // !!! Only for TTT
+                            display_ttt();
                             printf("Player %d has played\n", count % 2 == 0 ? 2 : 1);
                             choice[0] = res[PAYLOAD];
-                            if (game_id == TIC_TAC_TOE)
-                                update_board(choice[0], playBoard, other_player);
+                            update_board(choice[0], playBoard, other_player);
                             count++; // TO KEEP TRACK OF 'X' & 'O'
 
                             for (int i = 0; i < 4; i++)
@@ -185,9 +196,8 @@ int main(int argc, char *argv[])
                             choice[0] -= '0';
                             req[REQ_PAYLOAD] = choice[0];
                             bytes_sent = send(sockfd, req, sizeof(req), 0);
-                            if (game_id == TIC_TAC_TOE)
-                                update_board(req[REQ_PAYLOAD], playBoard, this_player);
-
+                            update_board(req[REQ_PAYLOAD], playBoard, this_player);
+                            printf("Awaiting for player %d\n", count % 2 == 0 ? 1 : 2);
                             if (bytes_sent == -1)
                             {
                                 perror("Bytes could not be sent!");
@@ -198,13 +208,15 @@ int main(int argc, char *argv[])
                         case END_GAME:
                             switch (res[PAYLOAD]) {
                                 case WIN:
+                                    printf("Your winning move %x\n", res[PAYLOAD + 1]);
                                     printf("----- YOU WON! -----\n");
                                     break;
                                 case LOSS:
                                     count++;
-                                    printf("Player %d has played\n", count % 2 == 0 ? 2 : 1);
                                     choice[0] = res[PAYLOAD + 1];
-                                    update_board(choice[0], playBoard, other_player);
+                                    printf("Player %d has played move %x\n", count % 2 == 0 ? 1 : 2, choice[0]);
+                                    if (game_id == TIC_TAC_TOE)
+                                        update_board(choice[0], playBoard, other_player);
                                     printf("----- YOU LOSS! -----\n");
                                     break;
                                 case TIE:
@@ -214,6 +226,13 @@ int main(int argc, char *argv[])
                                     break;
                             }
                             close_conn = true;
+                            if (game_id == TIC_TAC_TOE)
+                                std::cout << endl
+                                          << "Thank You for playing BIT Arcade's Tic-tac-Toe" << endl;
+
+                            if (game_id == ROCK_PAPER_SCISSOR)
+                                std::cout << endl
+                                          << "Thank You for playing BIT Arcade's Rock Paper Scissors" << endl;
                             break;
                         case OPPONENT_DISCONNECTED:
                             printf("Your opponent has disconnected\nThe game will end here!\n");
@@ -259,8 +278,6 @@ int main(int argc, char *argv[])
     }
     free(res);
     free(req);
-    std::cout << endl
-              << "Thank You for playing Tic-tac-Toe" << endl;
     close(sockfd);
     return 0;
 }
