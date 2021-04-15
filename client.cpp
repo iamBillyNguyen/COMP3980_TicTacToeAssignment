@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
             memset(choice, 0, sizeof(choice));
             switch (res[MSG_TYPE]) {
                 case SUCCESS:
-                    if (CONFIRMATION) {
+                    if (res[CONTEXT] == CONFIRMATION) {
                         if (!accepted) {
                             for (int i = 3; i < 7; i++)
                                 uid[i - 3] = res[i];
