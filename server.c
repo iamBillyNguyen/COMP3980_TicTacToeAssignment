@@ -355,6 +355,7 @@ static int accept_serv(Environment *env) {
                                             serv_env->res[PAYLOAD_LEN] = UID_SIZE;
                                             send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
                                             val = convert_uid_to_1byte(uid);
+                                            val = convert_uid_to_1byte(uid);
                                             serv_env->rps_player_socket[serv_env->rps_client_num] = new_sd;
                                             serv_env->rps_client_num++;
 
@@ -382,15 +383,19 @@ static int accept_serv(Environment *env) {
                                 // check if the connection has closed or not
                                 // close connection if yes
                                 if (!recv(i, serv_env->req, sizeof(serv_env->req), 0)) {
+                                    bool ttt_closed = false, rps_closed = false;
                                     printf("A player has quit!\n");
                                     serv_env->res[MSG_TYPE] = UPDATE;
                                     serv_env->res[CONTEXT] = OPPONENT_DISCONNECTED;
                                     serv_env->res[PAYLOAD_LEN] = 0;
                                     serv_env->res[PAYLOAD] = ' ';
+
                                     // SENDING DISCONNECTED RESPONSE TO OTHER PLAYER
+                                    // OR CHECKING IF BOTH CLIENTS ARE DISCONNECTED
                                     for (int z = 0; z < serv_env->ttt_index; z++) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->ttt_game_list[z].player[y] == i) {
+                                                ttt_closed = true;
                                                 send(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0], serv_env->res, sizeof(serv_env->res), 0);
                                                 serv_env->ttt_game_list[z].player[y] = 0;
                                                 if (y == 0)
@@ -398,15 +403,42 @@ static int accept_serv(Environment *env) {
                                                 else
                                                     serv_env->ttt_game_list[z].player[0] = 0;
                                                 break;
+                                            } else { // Both clients are closed
+                                                ttt_closed = true;
                                             }
                                         }
                                     }
-                                    close_conn = 1;
-                                    serv_env->ttt_client_num--;
+                                    if (ttt_closed) {
+                                        close_conn = 1;
+                                        serv_env->ttt_client_num--;
+                                    }
+
+                                    // SENDING DISCONNECTED RESPONSE TO OTHER PLAYER
+                                    // OR CHECKING IF BOTH CLIENTS ARE DISCONNECTED
+                                    for (int z = 0; z < serv_env->rps_index; z++) {
+                                        for (int y = 0; y < 2; y++) {
+                                            if (serv_env->rps_game_list[z].player[y] == i) { // One client disconnects
+                                                rps_closed = true;
+                                                send(serv_env->rps_game_list[z].player[y == 0 ? 1 : 0], serv_env->res, sizeof(serv_env->res), 0);
+                                                serv_env->rps_game_list[z].player[y] = 0;
+                                                if (y == 0)
+                                                    serv_env->rps_game_list[z].player[1] = 0;
+                                                else
+                                                    serv_env->rps_game_list[z].player[0] = 0;
+                                                break;
+                                            } else { // Both clients disconnected
+                                                rps_closed = true;
+                                            }
+                                        }
+                                    }
+                                    if (rps_closed) {
+                                        close_conn = 1;
+                                        serv_env->rps_client_num--;
+                                    }
                                     break;
                                 } else {
                                     for (int z = 0; z < serv_env->ttt_index; z++) {
-                                        for (int y = 0; y < 2; y++) {
+                                        for (int y = 0; y < NUM_PLAYER_PER_GAME; y++) {
                                             if (serv_env->ttt_game_list[z].player[y] == i) {
                                                 serv_env->ttt_game_list[z].turn++;
                                                 serv_env->ttt_game_list[z].c = serv_env->req[REQ_PAYLOAD];
@@ -424,11 +456,18 @@ static int accept_serv(Environment *env) {
                                                 }
                                                 break;
                                             }
+                                        }
+                                    }
+
+                                    for (int z = 0; z < serv_env->rps_index; z++) {
+                                        for (int y = 0; y < NUM_PLAYER_PER_GAME; y++) {
                                             if (serv_env->rps_game_list[z].player[y] == i) {
-                                                serv_env->rps_game_list[z].moves[y == 0 ? 0 : 1] = serv_env->req[REQ_PAYLOAD];
+                                                serv_env->rps_game_list[z].moves[y == 0 ? 0
+                                                                                        : 1] = serv_env->req[REQ_PAYLOAD];
                                                 printf("Player %d wrote: %x\n", (i - serv_env->sfd - 1),
                                                        serv_env->req[REQ_PAYLOAD]);
-                                                if (serv_env->rps_game_list[z].moves[y == 0 ? 1 : 0] != 0) // check if both players have placed their move
+                                                if (serv_env->rps_game_list[z].moves[y == 0 ? 1 : 0] !=
+                                                    0) // check if both players have placed their move
                                                     rps_handle_move(&(serv_env->rps_game_list[z]));
                                                 if (serv_env->rps_game_list[z].done) {
                                                     close_conn = 1;
@@ -442,7 +481,6 @@ static int accept_serv(Environment *env) {
                                                 break;
                                             }
                                         }
-
                                     }
                                     break;
 

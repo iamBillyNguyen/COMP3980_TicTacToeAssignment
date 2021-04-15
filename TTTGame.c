@@ -64,8 +64,6 @@ static int ttt_validate(Environment *env)
     game_env = (TTTEnvironment *)env;
     if (game_env->c == EOF || game_env->c == '-') { // If player quits midway
         printf("Player quits midgame\n");
-        // Accept a new player
-        //game_env->player[game_env->player2_turn] = dc_accept(game_env->sfd, (struct sockaddr *)&game_env->player_addr[game_env->player2_turn], &(game_env->slen));
         return MIDGAME_QUIT;
     }
     if (game_env->c < 0 || game_env->c > 8)
@@ -100,6 +98,8 @@ static int ttt_validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 0) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
+                game_env->res[PAYLOAD + 1] = game_env->c;
             if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
                 game_env->res[PAYLOAD + 1] = game_env->c;
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
@@ -113,6 +113,8 @@ static int ttt_validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 1) ? WIN : LOSS;
+            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
+                game_env->res[PAYLOAD + 1] = game_env->c;
             if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
                 game_env->res[PAYLOAD + 1] = game_env->c;
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
@@ -133,6 +135,13 @@ static int ttt_validate(Environment *env)
         }
         return FSM_EXIT;
     }
+    /** SUCCESS RESPONSE BACK TO CLIENTS */
+    game_env->res[MSG_TYPE] = SUCCESS;
+    game_env->res[CONTEXT] = CONFIRMATION;
+    game_env->res[PAYLOAD_LEN] = 0;
+    send(game_env->player[game_env->player2_turn], game_env->res, sizeof(game_env->res), 0);
+    memset(game_env->res, 0, sizeof(game_env->res));
+
     /** SEND POSITION/CHOICE TO CLIENTS */
     game_env->res[MSG_TYPE] = UPDATE;
     game_env->res[CONTEXT] = MOVE_MADE;
