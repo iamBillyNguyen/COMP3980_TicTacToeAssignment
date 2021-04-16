@@ -227,7 +227,6 @@ void set_new_rps_game(ServEnvironment *serv_env) {
         memset(serv_env->res, 0, sizeof(serv_env->res));
         serv_env->res[MSG_TYPE] = UPDATE;
         serv_env->res[CONTEXT] = START_GAME;
-        serv_env->res[PAYLOAD] = ' ';
         serv_env->res[PAYLOAD_LEN] = 0;
         send(serv_env->rps_game_list[serv_env->rps_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
     }
@@ -516,16 +515,26 @@ static int accept_serv(Environment *env) {
 //                               (struct sockaddr *) &i, &len);
 //                    }
 //                }
-
+                int nbytes;
                 len = sizeof(new_sd);
                 bzero(serv_env->datagram, sizeof(serv_env->datagram));
                 printf("\nMessage from UDP client: ");
-                recvfrom(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
+                nbytes = recvfrom(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                          (struct sockaddr *) &new_sd, &len);
+                if (nbytes < 0)
+                {
+                    perror ("recfrom (server)");
+                    exit (EXIT_FAILURE);
+                }
 
                 //puts(buffer);
-                sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
+                nbytes = sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                        (struct sockaddr *) &new_sd, &len);
+                if (nbytes < 0)
+                {
+                    perror ("sendto (server)");
+                    exit (EXIT_FAILURE);
+                }
                 break;
             }
         }
