@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(COMP3980_Assignment1 C)
+project(COMP3980_TicTacToeAssignment C)
 
 set(CMAKE_C_STANDARD 11)
 

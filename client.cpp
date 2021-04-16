@@ -18,7 +18,8 @@
 #include "./shared.h"
 
 // #define SERV_HOST_ADDR "23.16.22.78"
-#define SERV_HOST_ADDR "karelc.com"
+//#define SERV_HOST_ADDR "karelc.com"
+#define SERV_HOST_ADDR "127.0.0.1"
 #define BOARD_SIZE 3
 using namespace std;
 
@@ -58,9 +59,9 @@ int main(int argc, char *argv[])
 
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(3000);
+    serv_addr.sin_port = htons(PORT);
 
-    serv_addr.sin_addr.s_addr = inet_addr("44.239.72.164");
+    serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR);
     connectfd = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if (connectfd == -1)
     {
@@ -139,9 +140,9 @@ int main(int argc, char *argv[])
                                     cout << "sent " << choice[0] << " to server!" << endl;
                                     choice[0] -= '0';
                                     req[REQ_PAYLOAD] = choice[0];
-                                    for (int i = 0; i < 8; i++)
-                                        printf("%x ", req[i]);
-                                    cout << endl;
+//                                    for (int i = 0; i < 8; i++)
+//                                        printf("%x ", req[i]);
+//                                    cout << endl;
                                     bytes_sent = send(sockfd, req, sizeof(req), 0);
                                     update_board(req[REQ_PAYLOAD], playBoard, (count % 2 == 0 ? 'X' : 'O'));
 
@@ -172,8 +173,8 @@ int main(int argc, char *argv[])
                                 cout << "sent " << choice[0] << " to server!" << endl;
                                 choice[0] -= '0';
                                 req[REQ_PAYLOAD] = choice[0];
-                                for (int i = 0; i < 8; i++)
-                                    printf("%x ", req[i]);
+//                                for (int i = 0; i < 8; i++)
+//                                    printf("%x ", req[i]);
                                 bytes_sent = send(sockfd, req, sizeof(req), 0);
 
                                 if (bytes_sent == -1)

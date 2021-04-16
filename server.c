@@ -216,7 +216,6 @@ void set_new_ttt_game(ServEnvironment *serv_env) {
 
 void set_new_rps_game(ServEnvironment *serv_env) {
     RPSEnvironment *game_env;
-    memset(serv_env->res, 0, sizeof(serv_env->res));
 
     game_env = dc_malloc(sizeof(RPSEnvironment));
     init_rps_game((Environment*)game_env);
@@ -230,6 +229,7 @@ void set_new_rps_game(ServEnvironment *serv_env) {
         serv_env->res[PAYLOAD_LEN] = 0;
         send(serv_env->rps_game_list[serv_env->rps_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
     }
+    printf("Response: %d %d %d %d\n", serv_env->res[MSG_TYPE], serv_env->res[CONTEXT], serv_env->res[PAYLOAD_LEN], serv_env->res[PAYLOAD]);
     // TODO: Client needs to receive the res, and check the payload for X or O for turn
     serv_env->rps_index++;
 }
@@ -352,12 +352,12 @@ static int accept_serv(Environment *env) {
                                             serv_env->res[PAYLOAD_LEN] = UID_SIZE;
                                             send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
                                             val = convert_uid_to_1byte(uid);
-                                            val = convert_uid_to_1byte(uid);
                                             serv_env->rps_player_socket[serv_env->rps_client_num] = new_sd;
                                             serv_env->rps_client_num++;
 
                                             if (serv_env->rps_client_num % 2 == 0) // 2 players
                                                 set_new_rps_game(serv_env);
+                                            printf("Response: %d %d %d %d\n", serv_env->res[MSG_TYPE], serv_env->res[CONTEXT], serv_env->res[PAYLOAD_LEN], serv_env->res[PAYLOAD]);
                                             break;
                                         default:
                                             printf("Server only supports TTT and RPS!\n");
