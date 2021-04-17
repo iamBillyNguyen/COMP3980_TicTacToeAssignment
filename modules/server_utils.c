@@ -34,8 +34,8 @@ void set_new_ttt_game(ServEnvironment *serv_env) {
         memset(serv_env->res_4_bytes, 0, sizeof(serv_env->res_4_bytes));
         serv_env->res_4_bytes[MSG_TYPE] = UPDATE;
         serv_env->res_4_bytes[CONTEXT] = START_GAME;
-        serv_env->res_4_bytes[PAYLOAD] = (i == 0) ? X : O;
         serv_env->res_4_bytes[PAYLOAD_LEN] = 1;
+        serv_env->res_4_bytes[PAYLOAD] = (i == 0) ? X : O;
         send(serv_env->ttt_game_list[serv_env->ttt_index].player[i], serv_env->res_4_bytes, sizeof(serv_env->res_4_bytes), 0);
     }
     printf("Response: %d %d %d %d\n", serv_env->res_4_bytes[MSG_TYPE], serv_env->res_4_bytes[CONTEXT], serv_env->res_4_bytes[PAYLOAD_LEN], serv_env->res_4_bytes[PAYLOAD]);
