@@ -1,4 +1,8 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/server.dir/environment/RPSGame.c.o"
+  "CMakeFiles/server.dir/environment/TTTGame.c.o"
+  "CMakeFiles/server.dir/modules/server_utils.c.o"
+  "CMakeFiles/server.dir/modules/utils.c.o"
   "CMakeFiles/server.dir/server.c.o"
   "server"
   "server.pdb"

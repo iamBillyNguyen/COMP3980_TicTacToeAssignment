@@ -14,43 +14,18 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <dcfsm/fsm.h>
-#include <dc/stdlib.h>
-#include <dc/stdio.h>
-#include <dc/unistd.h>
-#include <dc/sys/socket.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
 #include <errno.h>
+#include "server.h"
 #include "shared.h"
-#include "TTTGame.c"
-#include "RPSGame.c"
-#include "modules/utils.c"
+#include "modules/utils.h"
 
 #define N 10
 #define UID_SIZE 4
-#define BUF_LEN 100
 
-typedef struct {
-    Environment common;
-    struct sockaddr_in addr;
-    int sfd, slen, max_sd, size, ttt_index, ttt_client_num, rps_index, rps_client_num, len, udpfd;
-    fd_set readfds, workingfds;
-    int *ttt_player_socket, *rps_player_socket;
-    TTTEnvironment *ttt_game_list;
-    RPSEnvironment *rps_game_list;
-    uint8_t msg_type, context, payload, payload_len;
-    uint8_t *res, *req;
-    uint8_t buffer[BUF_LEN];
-    uint8_t datagram[DATAGRAM_SIZE];
-} ServEnvironment;
+/**
+ * TODO: Record other clients testing on this server
+ * TODO: UDP go go
+ */
 
 static int init_server(Environment *env);
 static int server_error(Environment *env);
@@ -59,23 +34,6 @@ static int accept_serv(Environment *env);
 static int bind_serv(Environment *env);
 static int listen_serv(Environment *env);
 static int clean_up_serv(Environment *env);
-
-/**
- * TODO:
- * - Check if payload has been received in RPSGame and rps_check
- * - Add ERROR handling for RPS
- */
-
-typedef enum
-{
-    INIT_SERV = FSM_APP_STATE_START, // 2
-    BIND,                            // 3
-    LISTEN,                          // 4
-    ACCEPT,                          // 5
-    CLEAN_UP,                        // 6
-    ERROR_SERV,                      // 7
-    ERROR_CLIENT                     //8
-} States;
 
 int main()
 {
@@ -137,8 +95,8 @@ static int init_server(Environment *env) {
     serv_env->rps_game_list = (RPSEnvironment *)dc_malloc(sizeof(RPSEnvironment) * N);
     serv_env->ttt_player_socket = (int *)dc_malloc(2 * N * sizeof(int));
     serv_env->rps_player_socket = (int *)dc_malloc(2 * N * sizeof(int));
-    serv_env->req = dc_malloc(sizeof(uint8_t)  * 9);
-    serv_env->res = dc_malloc(sizeof(uint8_t)  * 4);
+    serv_env->req = dc_malloc(sizeof(uint8_t)  * 8);
+    serv_env->cur_ordering = 0;
     return BIND;
 }
 
@@ -175,65 +133,6 @@ static int listen_serv(Environment *env) {
     return ACCEPT;
 }
 
-void assign_player(ServEnvironment *serv_env, uint8_t game_id) {
-    // Assigning 2 new players to a game
-    switch (game_id) {
-        case TIC_TAC_TOE:
-            for (int j = (serv_env->ttt_client_num - 2), x = 0; j < serv_env->ttt_client_num, x < 2; j++, x++) {
-                serv_env->ttt_game_list[serv_env->ttt_index].player[x] = serv_env->ttt_player_socket[j];
-            }
-            break;
-        case ROCK_PAPER_SCISSOR:
-            for (int j = (serv_env->rps_client_num - 2), x = 0; j < serv_env->rps_client_num, x < 2; j++, x++) {
-                serv_env->rps_game_list[serv_env->rps_index].player[x] = serv_env->rps_player_socket[j];
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void set_new_ttt_game(ServEnvironment *serv_env) {
-    TTTEnvironment *game_env;
-    memset(serv_env->res, 0, sizeof(serv_env->res));
-
-    game_env = dc_malloc(sizeof(TTTEnvironment));
-    init_ttt_game((Environment*)game_env);
-    serv_env->ttt_game_list[serv_env->ttt_index] = *game_env;
-
-    assign_player(serv_env, TIC_TAC_TOE);
-    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++) {
-        memset(serv_env->res, 0, sizeof(serv_env->res));
-        serv_env->res[MSG_TYPE] = UPDATE;
-        serv_env->res[CONTEXT] = START_GAME;
-        serv_env->res[PAYLOAD] = (i == 0) ? X : O;
-        serv_env->res[PAYLOAD_LEN] = 1;
-        send(serv_env->ttt_game_list[serv_env->ttt_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
-    }
-    // TODO: Client needs to receive the res, and check the payload for X or O for turn
-    serv_env->ttt_index++;
-}
-
-void set_new_rps_game(ServEnvironment *serv_env) {
-    RPSEnvironment *game_env;
-
-    game_env = dc_malloc(sizeof(RPSEnvironment));
-    init_rps_game((Environment*)game_env);
-    serv_env->rps_game_list[serv_env->rps_index] = *game_env;
-
-    assign_player(serv_env, ROCK_PAPER_SCISSOR);
-    for (int i = 0; i < NUM_PLAYER_PER_GAME; i++) {
-        memset(serv_env->res, 0, sizeof(serv_env->res));
-        serv_env->res[MSG_TYPE] = UPDATE;
-        serv_env->res[CONTEXT] = START_GAME;
-        serv_env->res[PAYLOAD_LEN] = 0;
-        send(serv_env->rps_game_list[serv_env->rps_index].player[i], serv_env->res, sizeof(serv_env->res), 0);
-    }
-    printf("Response: %d %d %d %d\n", serv_env->res[MSG_TYPE], serv_env->res[CONTEXT], serv_env->res[PAYLOAD_LEN], serv_env->res[PAYLOAD]);
-    // TODO: Client needs to receive the res, and check the payload for X or O for turn
-    serv_env->rps_index++;
-}
-
 static int accept_serv(Environment *env) {
     ServEnvironment *serv_env;
     serv_env = (ServEnvironment *) env;
@@ -260,11 +159,10 @@ static int accept_serv(Environment *env) {
         for (i = 0; i <= serv_env->max_sd && desc > 0; ++i) {
 //            if (FD_ISSET(serv_env->sfd, &(serv_env->workingfds))) {
                 memset(serv_env->req, 0, sizeof(serv_env->req));
-                memset(serv_env->res, 0, sizeof(serv_env->res));
+                memset(serv_env->res_4_bytes, 0, sizeof(serv_env->res_4_bytes));
                 memset(serv_env->buffer, 0, sizeof(serv_env->buffer));
                 if (FD_ISSET(i, &(serv_env->workingfds))) {
                     desc -= 1;
-                    //if (serv_env->client_num <= BACKLOG) {
                     if (i == serv_env->sfd) {
                         printf("  Listening socket is readable\n");
                         do {
@@ -308,60 +206,59 @@ static int accept_serv(Environment *env) {
                                 // only confirm game_id at the beginning
                                 if (serv_env->buffer[REQ_CONTEXT] == CONFIRM_RULESET) {
                                     if (!confirm_protocol_version(serv_env->buffer[REQ_PAYLOAD])) {
-                                        serv_env->res[MSG_TYPE] = INVALID_PAYLOAD;
-                                        serv_env->res[CONTEXT] = INFORMATION;
-                                        serv_env->res[PAYLOAD_LEN] = 0;
-                                        serv_env->res[PAYLOAD] = ' ';
+                                        serv_env->res_4_bytes[MSG_TYPE] = INVALID_PAYLOAD;
+                                        serv_env->res_4_bytes[CONTEXT] = INFORMATION;
+                                        serv_env->res_4_bytes[PAYLOAD_LEN] = 0;
                                         return ERROR_CLIENT;
                                     }
                                     uint8_t *uid;
                                     size_t index;
-                                    uint8_t val;
+                                    memset(serv_env->res_8_bytes, 0, sizeof(serv_env->res_8_bytes));
                                     switch (serv_env->buffer[REQ_PAYLOAD + 1]) {
                                         case TIC_TAC_TOE:
                                             printf("TIC_TAC_TOE\n");
-                                            serv_env->res[MSG_TYPE] = SUCCESS;
-                                            serv_env->res[CONTEXT] = CONFIRMATION;
+                                            serv_env->res_8_bytes[MSG_TYPE] = SUCCESS;
+                                            serv_env->res_8_bytes[CONTEXT] = CONFIRMATION;
 
                                             uid = convert_uid_to_4_bytes(new_sd);
                                             index = PAYLOAD;
                                             for (int x = 0; x < UID_SIZE; x++) {
-                                                serv_env->res[index] = uid[x];
+                                                serv_env->res_8_bytes[index] = uid[x];
                                                 index++;
                                             }
-                                            serv_env->res[PAYLOAD_LEN] = UID_SIZE;
-                                            send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
-                                            val = convert_uid_to_1byte(uid);
+                                            serv_env->res_8_bytes[PAYLOAD_LEN] = UID_SIZE;
+                                            send(new_sd, serv_env->res_8_bytes, sizeof(serv_env->res_8_bytes), 0);
+                                            //val = convert_uid_to_1byte(uid);
                                             serv_env->ttt_player_socket[serv_env->ttt_client_num] = new_sd;
                                             serv_env->ttt_client_num++;
 
                                             if (serv_env->ttt_client_num % 2 == 0) // 2 players
                                                 set_new_ttt_game(serv_env);
+                                            printf("Response: %d %d %d %d %d %d %d %d\n", serv_env->res_8_bytes[MSG_TYPE], serv_env->res_8_bytes[CONTEXT], serv_env->res_8_bytes[PAYLOAD_LEN], serv_env->res_8_bytes[PAYLOAD], uid[0], uid[1], uid[2], uid[3]);
                                             break;
                                         case ROCK_PAPER_SCISSOR:
                                             printf("ROCK_PAPER_SCISSOR\n");
-                                            serv_env->res[MSG_TYPE] = SUCCESS;
-                                            serv_env->res[CONTEXT] = CONFIRMATION;
+                                            serv_env->res_8_bytes[MSG_TYPE] = SUCCESS;
+                                            serv_env->res_8_bytes[CONTEXT] = CONFIRMATION;
 
                                             uid = convert_uid_to_4_bytes(new_sd);
                                             index = PAYLOAD;
                                             for (int x = 0; x < UID_SIZE; x++) {
-                                                serv_env->res[index] = uid[x];
+                                                serv_env->res_8_bytes[index] = uid[x];
                                                 index++;
                                             }
-                                            serv_env->res[PAYLOAD_LEN] = UID_SIZE;
-                                            send(new_sd, serv_env->res, sizeof(serv_env->res), 0);
-                                            val = convert_uid_to_1byte(uid);
+                                            serv_env->res_8_bytes[PAYLOAD_LEN] = UID_SIZE;
+                                            send(new_sd, serv_env->res_8_bytes, sizeof(serv_env->res_8_bytes), 0);
+                                            //val = convert_uid_to_1byte(uid);
                                             serv_env->rps_player_socket[serv_env->rps_client_num] = new_sd;
                                             serv_env->rps_client_num++;
 
                                             if (serv_env->rps_client_num % 2 == 0) // 2 players
                                                 set_new_rps_game(serv_env);
-                                            printf("Response: %d %d %d %d\n", serv_env->res[MSG_TYPE], serv_env->res[CONTEXT], serv_env->res[PAYLOAD_LEN], serv_env->res[PAYLOAD]);
+                                            printf("Response: %d %d %d %d\n", serv_env->res_8_bytes[MSG_TYPE], serv_env->res_8_bytes[CONTEXT], serv_env->res_8_bytes[PAYLOAD_LEN], serv_env->res_8_bytes[PAYLOAD]);
                                             break;
                                         default:
                                             printf("Server only supports TTT and RPS!\n");
-                                            // TODO: Error handling
                                             break;
                                     }
 
@@ -379,13 +276,13 @@ static int accept_serv(Environment *env) {
                             if (i > serv_env->sfd) {
                                 // check if the connection has closed or not
                                 // close connection if yes
+                                memset(serv_env->res_3_bytes, 0, sizeof(serv_env->res_3_bytes));
                                 if (!recv(i, serv_env->req, sizeof(serv_env->req), 0)) {
                                     bool ttt_closed = false, rps_closed = false;
                                     printf("A player has quit!\n");
-                                    serv_env->res[MSG_TYPE] = UPDATE;
-                                    serv_env->res[CONTEXT] = OPPONENT_DISCONNECTED;
-                                    serv_env->res[PAYLOAD_LEN] = 0;
-                                    serv_env->res[PAYLOAD] = ' ';
+                                    serv_env->res_3_bytes[MSG_TYPE] = UPDATE;
+                                    serv_env->res_3_bytes[CONTEXT] = OPPONENT_DISCONNECTED;
+                                    serv_env->res_3_bytes[PAYLOAD_LEN] = 0;
 
                                     // SENDING DISCONNECTED RESPONSE TO OTHER PLAYER
                                     // OR CHECKING IF BOTH CLIENTS ARE DISCONNECTED
@@ -393,7 +290,7 @@ static int accept_serv(Environment *env) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->ttt_game_list[z].player[y] == i) {
                                                 ttt_closed = true;
-                                                send(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0], serv_env->res, sizeof(serv_env->res), 0);
+                                                send(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0], serv_env->res_3_bytes, sizeof(serv_env->res_3_bytes), 0);
                                                 serv_env->ttt_game_list[z].player[y] = 0;
                                                 if (y == 0)
                                                     serv_env->ttt_game_list[z].player[1] = 0;
@@ -416,7 +313,7 @@ static int accept_serv(Environment *env) {
                                         for (int y = 0; y < 2; y++) {
                                             if (serv_env->rps_game_list[z].player[y] == i) { // One client disconnects
                                                 rps_closed = true;
-                                                send(serv_env->rps_game_list[z].player[y == 0 ? 1 : 0], serv_env->res, sizeof(serv_env->res), 0);
+                                                send(serv_env->rps_game_list[z].player[y == 0 ? 1 : 0], serv_env->res_3_bytes, sizeof(serv_env->res_3_bytes), 0);
                                                 serv_env->rps_game_list[z].player[y] = 0;
                                                 if (y == 0)
                                                     serv_env->rps_game_list[z].player[1] = 0;
@@ -497,28 +394,10 @@ static int accept_serv(Environment *env) {
             //}
             /** UDP socket is readable */
             if (FD_ISSET(serv_env->udpfd, &(serv_env->workingfds))) {
-//                if (FD_ISSET(i, &(serv_env->workingfds))) {
-//                    desc -= 1;
-//                    if (i == serv_env->udpfd) {
-//                        printf("  Listening socket is readable\n");
-//                        new_sd = i + 1;
-//                        FD_SET(new_sd, &(serv_env->readfds));
-//                        if (new_sd > serv_env->udpfd) serv_env->max_sd = new_sd;
-//                    } else {
-//                        len = sizeof(i);
-//                        bzero(buffer, sizeof(buffer));
-//                        printf("\nMessage from UDP client: ");
-//                        recvfrom(serv_env->udpfd, buffer, sizeof(buffer), 0,
-//                                 (struct sockaddr *) &i, &len);
-//                        puts(buffer);
-//                        sendto(serv_env->udpfd, buffer, sizeof(buffer), 0,
-//                               (struct sockaddr *) &i, &len);
-//                    }
-//                }
                 int nbytes;
                 len = sizeof(new_sd);
                 bzero(serv_env->datagram, sizeof(serv_env->datagram));
-                printf("\nMessage from UDP client: ");
+                printf("\nUDP Server\n");
                 nbytes = recvfrom(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                          (struct sockaddr *) &new_sd, &len);
                 if (nbytes < 0)
@@ -527,6 +406,14 @@ static int accept_serv(Environment *env) {
                     exit (EXIT_FAILURE);
                 }
 
+                if (serv_env->datagram[ORDERING] < serv_env->cur_ordering)
+                    break;
+                serv_env->cur_ordering = serv_env->datagram[ORDERING];
+                uint8_t uid[UID_UDP];
+                for (size_t x = UID_UDP; x < UID_UDP + UID_SIZE; x++)
+                    uid[x - UID_SIZE] = serv_env->datagram[x];
+                uint8_t val = convert_uid_to_1byte(uid);
+                // TODO: send to player[val]
                 //puts(buffer);
                 nbytes = sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
                        (struct sockaddr *) &new_sd, &len);
@@ -578,10 +465,10 @@ static int client_error(Environment *env) {
     ServEnvironment *serv_env;
     serv_env = (ServEnvironment *)env;
 
-    serv_env->res[MSG_TYPE] = INVALID_PAYLOAD;
-    serv_env->res[CONTEXT] = INFORMATION;
-    serv_env->res[PAYLOAD_LEN] = 0;
-    serv_env->res[PAYLOAD] = ' ';
+    memset(serv_env->res_3_bytes, 0, sizeof(serv_env->res_3_bytes));
+    serv_env->res_3_bytes[MSG_TYPE] = INVALID_PAYLOAD;
+    serv_env->res_3_bytes[CONTEXT] = INFORMATION;
+    serv_env->res_3_bytes[PAYLOAD_LEN] = 0;
 
     return FSM_EXIT;
 }

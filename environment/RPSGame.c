@@ -4,13 +4,12 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "RPSGame.h"
-#include "shared.h"
+#include "../shared.h"
 
 typedef enum
 {
     VALIDATE_RPS = FSM_APP_STATE_START,  // 2
     RPS_ERROR,                           // 3
-    MIDGAME_QUIT_RPS,                    // 4
 } RPSGameStates;
 
 bool rps_handle_move(RPSEnvironment *env) {
@@ -29,7 +28,7 @@ bool rps_handle_move(RPSEnvironment *env) {
     int end_state;
 
     start_state = FSM_INIT; // 0
-    end_state = VALIDATE;       // 2
+    end_state = VALIDATE_RPS;       // 2
     code = fsm_run((Environment *)env, &start_state, &end_state, transitions);
 
     if (code != 0)
@@ -72,10 +71,6 @@ static int rps_validate(Environment *env)
             game_env->res[CONTEXT] = END_GAME;
             game_env->res[PAYLOAD_LEN] = 1;
             game_env->res[PAYLOAD] = (i == 0) ? WIN : LOSS;
-            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
-                game_env->res[PAYLOAD + 1] = game_env->moves[0];
-            if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
-                game_env->res[PAYLOAD + 1] = game_env->moves[1];
             send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
         }
         return FSM_EXIT;
@@ -110,7 +105,7 @@ static int rps_validate(Environment *env)
 
     /** SUCCESS RESPONSE BACK TO CLIENTS */
     game_env->res[MSG_TYPE] = UPDATE;
-    game_env->res[CONTEXT] = MOVE_MADE;
+    game_env->res[CONTEXT] = GAME_ACTION;
     game_env->res[PAYLOAD_LEN] = 0;
     for (int i = 0; i < NUM_PLAYER_PER_GAME; i++)
         send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
@@ -132,7 +127,7 @@ uint8_t rps_check(uint8_t moves[2])
 static int rps_error(Environment *env)
 {
     RPSEnvironment *game_env;
-    game_env = (TTTEnvironment *)env;
+    game_env = (RPSEnvironment *)env;
 
     printf("Invalid move player %d, place again!\n", game_env->player_turn + 1);
     game_env->res[MSG_TYPE] = INVALID_ACTION;

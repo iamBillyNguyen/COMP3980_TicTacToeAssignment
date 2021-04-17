@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "TTTGame.h"
-#include "shared.h"
+#include "../shared.h"
 
 typedef enum
 {
@@ -50,7 +50,6 @@ void init_ttt_game(Environment *env) {
     game_env->player2_turn = false;
     game_env->done = false;
     game_env->player_c = 'X';
-    game_env->res = (uint8_t*) dc_malloc(sizeof(uint8_t) * 4);
 
     for (int i = 0; i < 9; i++) {
         game_env->playBoard[i] = ' ';
@@ -90,34 +89,27 @@ static int ttt_validate(Environment *env)
     update_ttt_board(game_env->c, game_env->playBoard, game_env->player_c, env);
 
     char key = ttt_check(game_env->playBoard);
+    memset(game_env->res_4_bytes, 0, sizeof(game_env->res_4_bytes));
     if (key == 'X') {
         printf("----- Player 1 won! -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
-            game_env->res[MSG_TYPE] = UPDATE;
-            game_env->res[CONTEXT] = END_GAME;
-            game_env->res[PAYLOAD_LEN] = 1;
-            game_env->res[PAYLOAD] = (i == 0) ? WIN : LOSS;
-            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
-            if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
-            send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
+            game_env->res_3_bytes[MSG_TYPE] = UPDATE;
+            game_env->res_4_bytes[CONTEXT] = END_GAME;
+            game_env->res_4_bytes[PAYLOAD_LEN] = 1;
+            game_env->res_4_bytes[PAYLOAD] = (i == 0) ? WIN : LOSS;
+            send(game_env->player[i], game_env->res_4_bytes, sizeof(game_env->res_4_bytes), 0);
         }
         return FSM_EXIT;
     } else if (key == 'O') {
         printf("----- Player 2 won! -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
-            game_env->res[MSG_TYPE] = UPDATE;
-            game_env->res[CONTEXT] = END_GAME;
-            game_env->res[PAYLOAD_LEN] = 1;
-            game_env->res[PAYLOAD] = (i == 1) ? WIN : LOSS;
-            if (game_env->res[PAYLOAD] == WIN) // sending the client's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
-            if (game_env->res[PAYLOAD] == LOSS) // sending the opponent's win move
-                game_env->res[PAYLOAD + 1] = game_env->c;
-            send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
+            game_env->res_4_bytes[MSG_TYPE] = UPDATE;
+            game_env->res_4_bytes[CONTEXT] = END_GAME;
+            game_env->res_4_bytes[PAYLOAD_LEN] = 1;
+            game_env->res_4_bytes[PAYLOAD] = (i == 1) ? WIN : LOSS;
+            send(game_env->player[i], game_env->res_4_bytes, sizeof(game_env->res_4_bytes), 0);
         }
         return FSM_EXIT;
     }
@@ -127,31 +119,34 @@ static int ttt_validate(Environment *env)
         printf("----- TIE -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
-            game_env->res[MSG_TYPE] = UPDATE;
-            game_env->res[CONTEXT] = END_GAME;
-            game_env->res[PAYLOAD_LEN] = 1;
-            game_env->res[PAYLOAD] = TIE;
-            send(game_env->player[i], game_env->res, sizeof(game_env->res), 0);
+            game_env->res_4_bytes[MSG_TYPE] = UPDATE;
+            game_env->res_4_bytes[CONTEXT] = END_GAME;
+            game_env->res_4_bytes[PAYLOAD_LEN] = 1;
+            game_env->res_4_bytes[PAYLOAD] = TIE;
+            send(game_env->player[i], game_env->res_4_bytes, sizeof(game_env->res_4_bytes), 0);
         }
         return FSM_EXIT;
     }
     /** SUCCESS RESPONSE BACK TO CLIENTS */
-    game_env->res[MSG_TYPE] = SUCCESS;
-    game_env->res[CONTEXT] = CONFIRMATION;
-    game_env->res[PAYLOAD_LEN] = 0;
-    send(game_env->player[game_env->player2_turn], game_env->res, sizeof(game_env->res), 0);
-    memset(game_env->res, 0, sizeof(game_env->res));
+    memset(game_env->res_3_bytes, 0, sizeof(game_env->res_3_bytes));
+    game_env->res_3_bytes[MSG_TYPE] = SUCCESS;
+    game_env->res_3_bytes[CONTEXT] = GAME_ACTION;
+    game_env->res_3_bytes[PAYLOAD_LEN] = 0;
+    send(game_env->player[game_env->player2_turn], game_env->res_3_bytes, sizeof(game_env->res_3_bytes), 0);
+
 
     /** SEND POSITION/CHOICE TO CLIENTS */
-    game_env->res[MSG_TYPE] = UPDATE;
-    game_env->res[CONTEXT] = MOVE_MADE;
-    game_env->res[PAYLOAD_LEN] = 1;
-    game_env->res[PAYLOAD] = game_env->c;
+    memset(game_env->res_4_bytes, 0, sizeof(game_env->res_4_bytes));
+    game_env->res_4_bytes[MSG_TYPE] = UPDATE;
+    game_env->res_4_bytes[CONTEXT] = MOVE_MADE;
+    game_env->res_4_bytes[PAYLOAD_LEN] = 1;
+    game_env->res_4_bytes[PAYLOAD] = game_env->c;
     game_env->player2_turn = !game_env->player2_turn;
-    send(game_env->player[game_env->player2_turn ? 1 : 0], game_env->res, sizeof(game_env->res), 0);
+    send(game_env->player[game_env->player2_turn ? 1 : 0], game_env->res_4_bytes, sizeof(game_env->res_4_bytes), 0);
 
     return FSM_EXIT;
 }
+
 static void update_ttt_board(uint8_t c, char board[9], char player, Environment *env)
 {
     TTTEnvironment *game_env;
@@ -169,8 +164,8 @@ static void update_ttt_board(uint8_t c, char board[9], char player, Environment 
     printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
 }
 
-/** CHECK FOR WIN, LOSE, OR TIE */
-char ttt_check(char playBoard[9])
+/** CHECK FOR WIN, LOSS, OR TIE */
+char ttt_check(const char playBoard[9])
 {
     int i;
     char key = ' ';
@@ -203,37 +198,12 @@ static int ttt_error(Environment *env)
     TTTEnvironment *game_env;
     game_env = (TTTEnvironment *)env;
 
-    printf("Invalid move player %d, place again!\n", game_env->player2_turn ? 2 : 1);
-    game_env->res[MSG_TYPE] = INVALID_ACTION;
-    game_env->res[CONTEXT] = GAME_ACTION;
-    game_env->res[PAYLOAD_LEN] = 0;
-    game_env->res[PAYLOAD] = ' ';
-    send(game_env->player[game_env->player2_turn], game_env->res, sizeof(game_env->res), 0);
-//    send(game_env->player[game_env->player2_turn], INVALID_MOVE, strlen(INVALID_MOVE), 0);
-//    send(game_env->player[!game_env->player2_turn], WAIT, strlen(WAIT), 0);
+    printf("Invalid move, place again!\n");
+    memset(game_env->res_3_bytes, 0, sizeof(game_env->res_3_bytes));
+    game_env->res_3_bytes[MSG_TYPE] = INVALID_ACTION;
+    game_env->res_3_bytes[CONTEXT] = GAME_ACTION;
+    game_env->res_3_bytes[PAYLOAD_LEN] = 0;
+    send(game_env->player[game_env->player2_turn], game_env->res_3_bytes, sizeof(game_env->res_3_bytes), 0);
 
     return FSM_EXIT;
 }
-
-//static void check_user_choice(Environment *env) {
-//    TTTEnvironment *game_env;
-//    game_env = (TTTEnvironment *)env;
-//    int player_num = 2;
-//
-//    if (game_env->c != 'r') {
-//        memset(&(game_env->player[0]), 0, sizeof(game_env->player[0]));
-//        player_num--;
-//    }
-//    if (game_env->c != 'r') {
-//        memset(&(game_env->player[1]), 0, sizeof(game_env->player[1]));
-//        player_num--;
-//    }
-//    if (player_num == 1) {
-//        game_env->client_num--;
-//    } else if (player_num == 0){
-//        game_env->client_num = 0;
-//    }
-//}
-
-
-

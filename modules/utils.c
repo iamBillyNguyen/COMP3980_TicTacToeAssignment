@@ -2,9 +2,8 @@
 // Created by billy on 2021-04-07.
 //
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
-#include <unistd.h>
+#include <dc/stdlib.h>
 #include "utils.h"
 #include "../shared.h"
 
@@ -25,7 +24,7 @@ uint8_t* convert_uid_to_4_bytes(uint8_t val) {
     return bytes;
 }
 
-uint8_t convert_uid_to_1byte(uint8_t* bytes) {
+uint8_t convert_uid_to_1byte(uint8_t bytes[4]) {
     uint8_t val;
     val = (bytes[0] <<24) + (bytes[1] <<16) + (bytes[2] <<8) + bytes[3];
     printf("1-byte uid: %x\n", val);

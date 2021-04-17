@@ -6,8 +6,9 @@
 
 // https://www.sciencedirect.com/topics/computer-science/registered-port#:~:text=Ports%200%20through%201023%20are,be%20used%20dynamically%20by%20applications.
 // /etc/services
-#define PORT 8080
+#define PORT 2034
 #define DATAGRAM_SIZE 5008
+#define BUF_LEN 100
 
 // For Client's request
 #define UID_1 0

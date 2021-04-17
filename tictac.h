@@ -16,7 +16,6 @@ int get_game_option();
  */
 void display_ttt()
 {
-
     int i, j;
     system("clear");
     std::cout<<"\n\n-------------- Cells --------------"<<endl<<endl;

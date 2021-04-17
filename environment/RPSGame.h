@@ -1,6 +1,19 @@
 #ifndef RPSGAME_H
 #define RPSGAME_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <dc/stdlib.h>
+#include <dc/stdio.h>
+#include <dc/unistd.h>
+#include <dc/sys/socket.h>
 #include <dcfsm/fsm.h>
 
 #define TOTAL_TURNS 9
