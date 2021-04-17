@@ -94,7 +94,7 @@ static int ttt_validate(Environment *env)
         printf("----- Player 1 won! -----\n");
         game_env->done = true;
         for (int i = 0; i < NUM_PLAYER_PER_GAME;i++) {
-            game_env->res_3_bytes[MSG_TYPE] = UPDATE;
+            game_env->res_4_bytes[MSG_TYPE] = UPDATE;
             game_env->res_4_bytes[CONTEXT] = END_GAME;
             game_env->res_4_bytes[PAYLOAD_LEN] = 1;
             game_env->res_4_bytes[PAYLOAD] = (i == 0) ? WIN : LOSS;
