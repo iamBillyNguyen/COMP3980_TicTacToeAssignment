@@ -5,7 +5,7 @@ By: Iris Law, Tiffany Gu, Billy Nguyen
 
 ## !!! Note:
 - Connection with other team's client works; however, server seems to send an extra byte at the beginning, pushing the response array. As a result, this causes other client to read wrong data, despite our own clients work well with our server.
-- UDP connection works and implementations are work-in-progress (you can found the incomplete code in both the server and client); however, we did not have enough time to implement the voice chat ability. 
+- UDP connection works and implementations are work-in-progress (you can find the incomplete code in both the server and client); however, we did not have enough time to implement the voice chat ability :(
 
 ## 1. Installing dcfsm Library
 Please install dcfsm library from D'Arcy's dcfsm repo https://github.com/darcy-bcit/dcfsm/blob/main/demo/demo.c.
