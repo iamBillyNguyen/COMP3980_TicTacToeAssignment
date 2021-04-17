@@ -5,32 +5,41 @@
 using namespace std;
 
 
-void display();
+void display_ttt();
+void display_rps();
 int input(char, int, int);
+int get_game_option();
 
 
 /**
  * Function to display the formatting of the tic tac toe game.
  */
-void display()
+void display_ttt()
 {
-	
-	int i, j;
-	system("clear");
-	std::cout<<"\nWelcome to the Tic-Tac-Toe Game!\n\n Spots"<<endl<<endl;
-    char letter = 'A';
+    int i, j;
+    system("clear");
+    std::cout<<"\n\n-------------- Cells --------------"<<endl<<endl;
+    char cell = '0';
     for (i=0; i<3; i++)
-	{	
-		std::cout<<"\t";
-	    for (j=0; j<3; j++){
-			std::cout  <<" "<< letter << "    ";    
-				letter++;
-		}
-		std::cout<<endl;   
-	
-	}       
-
+    {
+        std::cout<<"\t";
+        for (j=0; j<3; j++){
+            std::cout  <<" "<< cell << "    ";
+            cell++;
+        }
+        std::cout<<endl;
+    }
 }
+
+void display_rps() {
+    system("clear");
+    cout << "\n\n-------------- Rules --------------" <<endl<<endl;
+    cout << "Rock:      1"<<endl;
+    cout << "Paper:     2"<<endl;
+    cout << "Scissors:  3"<<endl;
+    cout << endl;
+}
+
 /**
  * Input validation.
  * @param choice player choice
@@ -38,34 +47,51 @@ void display()
  */
 int input(char choice[])
 {
-	char letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'};
-	bool flag = false;
-	for(int i = 0; i < 9; i++){
-		if(choice[0] == letters[i]){
-			flag = true;
-			return 0;
-		}
-	}
-	std::cout<<"Invalid input, use A-I!\n";
-	return -1;
+    char letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'};
+    bool flag = false;
+    for(int i = 0; i < 9; i++){
+        if(choice[0] == letters[i]){
+            flag = true;
+            return 0;
+        }
+    }
+    std::cout<<"Invalid input, use A-I!\n";
+    return -1;
 }
 
-/**
+/**Q
  * Function to display board.
- * @param c letter
+ * @param cell
  * @param board board format
  * @param player player
  */
-void update_board(char c, char board[][3], char player) {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            if (c == board[i][j]) {
-                board[i][j] = player;
-                break;
-            }
-        }
+void update_board(uint8_t cell, char board[9], char player) {
+    if (board[cell] == ' ') {
+        board[cell] = player;
+
+        printf("    %c  | %c  | %c\n", board[0], board[1], board[2]);
+        printf("    --------------\n");
+        printf("    %c  | %c  | %c\n", board[3], board[4], board[5]);
+        printf("    --------------\n");
+        printf("    %c  | %c  | %c\n", board[6], board[7], board[8]);
     }
-    printf("    %c  %c  %c\n", board[0][0], board[0][1], board[0][2]);
-    printf("    %c  %c  %c\n", board[1][0], board[1][1], board[1][2]);
-    printf("    %c  %c  %c\n", board[2][0], board[2][1], board[2][2]);
+}
+
+int get_game_option() {
+    system("clear");
+    int answer;
+    bool done = false;
+    while(!done) {
+        cout << "-------------- Our game menu --------------" << endl;
+        cout << "Choose one:" << endl;
+        cout << "   1. Tic Tac Toe" << endl;
+        cout << "   2. Rock Paper Scissors" << endl;
+        cout << "Your choice: ";
+        cin >> answer;
+        if (answer < 1 || answer > 2)
+            cout << "Option not available. Choose again" << endl;
+        else
+            done = true;
+    }
+    return answer;
 }

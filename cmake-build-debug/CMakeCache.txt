@@ -130,7 +130,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=COMP3980_Assignment1
+CMAKE_PROJECT_NAME:STATIC=COMP3980_TicTacToeAssignment
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -195,10 +195,17 @@ CMAKE_STRIP:FILEPATH=/usr/bin/strip
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Value Computed by CMake
+<<<<<<< HEAD
 COMP3980_Assignment1_BINARY_DIR:STATIC=/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/cmake-build-debug
 
 //Value Computed by CMake
 COMP3980_Assignment1_SOURCE_DIR:STATIC=/home/billy/CLionProjects/COMP3980_TicTacToeAssignment
+=======
+COMP3980_TicTacToeAssignment_BINARY_DIR:STATIC=/home/billy/CLionProjects/COMP3980_TicTacToeAssignment/cmake-build-debug
+
+//Value Computed by CMake
+COMP3980_TicTacToeAssignment_SOURCE_DIR:STATIC=/home/billy/CLionProjects/COMP3980_TicTacToeAssignment
+>>>>>>> final_server
 
 //Path to a program.
 ProcessorCount_cmd_nproc:FILEPATH=/usr/bin/nproc

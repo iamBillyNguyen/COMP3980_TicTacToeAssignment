@@ -3,6 +3,9 @@
 
 By: Iris Law, Tiffany Gu, Billy Nguyen
 
+## !!! Note:
+Connection with other team's client works; however, server seems to send an extra byte at the beginning, pushing the response array. As a result, this causes other client to read wrong data, despite our own clients work well with our server.
+
 ## 1. Installing dcfsm Library
 Please install dcfsm library from D'Arcy's dcfsm repo https://github.com/darcy-bcit/dcfsm/blob/main/demo/demo.c.
 

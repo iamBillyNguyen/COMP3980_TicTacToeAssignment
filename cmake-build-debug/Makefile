@@ -143,6 +143,114 @@ server/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/build
 .PHONY : server/fast
 
+environment/RPSGame.o: environment/RPSGame.c.o
+
+.PHONY : environment/RPSGame.o
+
+# target to build an object file
+environment/RPSGame.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/RPSGame.c.o
+.PHONY : environment/RPSGame.c.o
+
+environment/RPSGame.i: environment/RPSGame.c.i
+
+.PHONY : environment/RPSGame.i
+
+# target to preprocess a source file
+environment/RPSGame.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/RPSGame.c.i
+.PHONY : environment/RPSGame.c.i
+
+environment/RPSGame.s: environment/RPSGame.c.s
+
+.PHONY : environment/RPSGame.s
+
+# target to generate assembly for a file
+environment/RPSGame.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/RPSGame.c.s
+.PHONY : environment/RPSGame.c.s
+
+environment/TTTGame.o: environment/TTTGame.c.o
+
+.PHONY : environment/TTTGame.o
+
+# target to build an object file
+environment/TTTGame.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/TTTGame.c.o
+.PHONY : environment/TTTGame.c.o
+
+environment/TTTGame.i: environment/TTTGame.c.i
+
+.PHONY : environment/TTTGame.i
+
+# target to preprocess a source file
+environment/TTTGame.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/TTTGame.c.i
+.PHONY : environment/TTTGame.c.i
+
+environment/TTTGame.s: environment/TTTGame.c.s
+
+.PHONY : environment/TTTGame.s
+
+# target to generate assembly for a file
+environment/TTTGame.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/environment/TTTGame.c.s
+.PHONY : environment/TTTGame.c.s
+
+modules/server_utils.o: modules/server_utils.c.o
+
+.PHONY : modules/server_utils.o
+
+# target to build an object file
+modules/server_utils.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/server_utils.c.o
+.PHONY : modules/server_utils.c.o
+
+modules/server_utils.i: modules/server_utils.c.i
+
+.PHONY : modules/server_utils.i
+
+# target to preprocess a source file
+modules/server_utils.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/server_utils.c.i
+.PHONY : modules/server_utils.c.i
+
+modules/server_utils.s: modules/server_utils.c.s
+
+.PHONY : modules/server_utils.s
+
+# target to generate assembly for a file
+modules/server_utils.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/server_utils.c.s
+.PHONY : modules/server_utils.c.s
+
+modules/utils.o: modules/utils.c.o
+
+.PHONY : modules/utils.o
+
+# target to build an object file
+modules/utils.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/utils.c.o
+.PHONY : modules/utils.c.o
+
+modules/utils.i: modules/utils.c.i
+
+.PHONY : modules/utils.i
+
+# target to preprocess a source file
+modules/utils.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/utils.c.i
+.PHONY : modules/utils.c.i
+
+modules/utils.s: modules/utils.c.s
+
+.PHONY : modules/utils.s
+
+# target to generate assembly for a file
+modules/utils.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/modules/utils.c.s
+.PHONY : modules/utils.c.s
+
 server.o: server.c.o
 
 .PHONY : server.o
@@ -179,6 +287,18 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... server"
+	@echo "... environment/RPSGame.o"
+	@echo "... environment/RPSGame.i"
+	@echo "... environment/RPSGame.s"
+	@echo "... environment/TTTGame.o"
+	@echo "... environment/TTTGame.i"
+	@echo "... environment/TTTGame.s"
+	@echo "... modules/server_utils.o"
+	@echo "... modules/server_utils.i"
+	@echo "... modules/server_utils.s"
+	@echo "... modules/utils.o"
+	@echo "... modules/utils.i"
+	@echo "... modules/utils.s"
 	@echo "... server.o"
 	@echo "... server.i"
 	@echo "... server.s"
