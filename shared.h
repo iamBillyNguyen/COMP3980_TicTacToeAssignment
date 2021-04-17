@@ -10,7 +10,7 @@
 #define DATAGRAM_SIZE 5008
 #define BUF_LEN 100
 
-// For Client's request
+// For Client request
 #define UID_1 0
 #define UID_2 1
 #define UID_3 2
@@ -20,7 +20,7 @@
 #define REQ_PAYLOAD_LEN 6
 #define REQ_PAYLOAD 7
 
-// For server's response
+// For server response
 #define MSG_TYPE 0
 #define CONTEXT 1
 #define PAYLOAD_LEN 2

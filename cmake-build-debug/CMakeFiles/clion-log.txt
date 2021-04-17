@@ -1,4 +1,0 @@
-/home/billy/Downloads/clion-2020.2.1/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/billy/CLionProjects/COMP3980_TicTacToeAssignment
--- Configuring done
--- Generating done
--- Build files have been written to: /home/billy/CLionProjects/COMP3980_TicTacToeAssignment/cmake-build-debug

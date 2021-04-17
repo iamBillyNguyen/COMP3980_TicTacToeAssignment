@@ -34,7 +34,7 @@ int main()
            0, (const struct sockaddr*)&servaddr,
            sizeof(servaddr));
 
-    // receive server's response
+    // receive server response
     printf("Message from server: ");
     n = recvfrom(sockfd, (char*)buffer, MAXLINE,
                  0, (struct sockaddr*)&servaddr,

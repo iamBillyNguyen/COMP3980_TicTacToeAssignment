@@ -1,3 +1,0 @@
-/home/tiffany/Documents/3980/6/COMP3980_Assignment1/build/CMakeFiles/rebuild_cache.dir
-/home/tiffany/Documents/3980/6/COMP3980_Assignment1/build/CMakeFiles/edit_cache.dir
-/home/tiffany/Documents/3980/6/COMP3980_Assignment1/build/CMakeFiles/server.dir

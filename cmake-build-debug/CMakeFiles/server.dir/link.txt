@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/server.dir/server.c.o CMakeFiles/server.dir/modules/server_utils.c.o CMakeFiles/server.dir/modules/utils.c.o CMakeFiles/server.dir/environment/TTTGame.c.o CMakeFiles/server.dir/environment/RPSGame.c.o  -o server   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib -ldcfsm -ldc 

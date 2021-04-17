@@ -31,7 +31,7 @@ typedef enum
     ACCEPT,                          // 5
     CLEAN_UP,                        // 6
     ERROR_SERV,                      // 7
-    ERROR_CLIENT                     //8
+    ERROR_CLIENT                     // 8
 } States;
 
 typedef struct {
