@@ -395,11 +395,10 @@ static int accept_serv(Environment *env) {
             /** UDP socket is readable */
             if (FD_ISSET(serv_env->udpfd, &(serv_env->workingfds))) {
                 int nbytes;
-                len = sizeof(new_sd);
                 bzero(serv_env->datagram, sizeof(serv_env->datagram));
                 printf("\nUDP Server\n");
                 nbytes = recvfrom(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
-                         (struct sockaddr *) &new_sd, &len);
+                         (struct sockaddr *) &i, sizeof(i));
                 if (nbytes < 0)
                 {
                     perror ("recfrom (server)");
@@ -413,10 +412,27 @@ static int accept_serv(Environment *env) {
                 for (size_t x = UID_UDP; x < UID_UDP + UID_SIZE; x++)
                     uid[x - UID_SIZE] = serv_env->datagram[x];
                 uint8_t val = convert_uid_to_1byte(uid);
-                // TODO: send to player[val]
-                //puts(buffer);
-                nbytes = sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
-                       (struct sockaddr *) &new_sd, &len);
+
+                for (int z = 0; z < serv_env->ttt_index; z++) {
+                    for (int y = 0; y < NUM_PLAYER_PER_GAME; y++) {
+                        if (serv_env->ttt_game_list[z].player[y] == val) {
+                            nbytes = sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
+                                            (struct sockaddr *) &(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0]), sizeof(serv_env->ttt_game_list[z].player[y == 0 ? 1 : 0]));
+                            break;
+                        }
+                    }
+                }
+
+                for (int z = 0; z < serv_env->rps_index; z++) {
+                    for (int y = 0; y < NUM_PLAYER_PER_GAME; y++) {
+                        if (serv_env->rps_game_list[z].player[y] == val) {
+                            nbytes = sendto(serv_env->udpfd, serv_env->datagram, sizeof(serv_env->datagram), 0,
+                                            (struct sockaddr *) &(serv_env->rps_game_list[z].player[y == 0 ? 1 : 0]), sizeof(serv_env->rps_game_list[z].player[y == 0 ? 1 : 0]));
+                            break;
+                        }
+                    }
+                }
+
                 if (nbytes < 0)
                 {
                     perror ("sendto (server)");

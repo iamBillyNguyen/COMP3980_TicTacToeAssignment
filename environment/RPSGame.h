@@ -26,7 +26,7 @@ typedef struct
     bool done;
     int player[NUM_PLAYER_PER_GAME];
     int client_num, player_turn;
-    uint8_t* res;
+    uint8_t res_3_bytes[3], res_4_bytes[4], res_8_bytes[8];;
 } RPSEnvironment;
 
 static int rps_validate(Environment *env);
