@@ -4,7 +4,8 @@
 By: Iris Law, Tiffany Gu, Billy Nguyen
 
 ## !!! Note:
-Connection with other team's client works; however, server seems to send an extra byte at the beginning, pushing the response array. As a result, this causes other client to read wrong data, despite our own clients work well with our server.
+- Connection with other team's client works; however, server seems to send an extra byte at the beginning, pushing the response array. As a result, this causes other client to read wrong data, despite our own clients work well with our server.
+- UDP connection works and implementations are work-in-progress (you can found the incomplete code in both the server and client); however, we did not have enough time to implement the voice chat ability. 
 
 ## 1. Installing dcfsm Library
 Please install dcfsm library from D'Arcy's dcfsm repo https://github.com/darcy-bcit/dcfsm/blob/main/demo/demo.c.
@@ -38,6 +39,3 @@ The server is written in C and is compatible with Linux system. The client is wr
 The IP address of the server and the clients is hardcoded. To test connection, you can type
 ```telnet <IP address> <port>``` to check if the remote server is available.
 This design uses dynamic memory to store multiple games.  
-
-## 5. Some functions not supported
-If a player leaves the game in the middle of playing, then another player connects, the latter player will be connected to the game in the middle of playing. We currently do not support the function to start a new game if a previous player has left a game.
